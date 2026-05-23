@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helical Motion in a Magnetic Field — Interactive H2 Physics Lesson</title>
+
+    <!-- KaTeX for crisp LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        :root {
+            --bg-main: #0a0a0c;
+            --panel-bg: rgba(20, 22, 30, 0.94);
+            --panel-border: rgba(255, 255, 255, 0.12);
+            --accent: #00d4dd;
+            --accent-soft: rgba(0, 212, 221, 0.15);
+            --text: #f0f4f8;
+            --text-dim: #aab2bd;
+            --text-muted: #6b7280;
+            --pos: #ff4757;
+            --neg: #2ed573;
+            --v-yellow: #ffeb3b;
+            --v-blue: #2196f3;
+            --v-purple: #9c27b0;
+            --v-pink: #e91e63;
+            --warn: #f59e0b;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text);
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ============ SIDEBAR BASE ============ */
+        .sidebar {
+            position: fixed;
+            top: 16px;
+            bottom: 16px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+            overflow: hidden;
+        }
+
+        #left-sidebar {
+            left: 16px;
+            width: 340px;
+        }
+        #left-sidebar.collapsed {
+            transform: translateX(calc(-100% - 32px));
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #right-sidebar {
+            right: 16px;
+            width: 400px;
+        }
+        #right-sidebar.collapsed {
+            transform: translateX(calc(100% + 32px));
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--panel-border);
+            flex-shrink: 0;
+            background: linear-gradient(180deg, rgba(0,212,221,0.08), transparent);
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 1.0rem;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+            font-weight: 700;
+        }
+
+        .collapse-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--panel-border);
+            color: var(--accent);
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: grid;
+            place-items: center;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+        .collapse-btn:hover {
+            background: var(--accent-soft);
+            transform: scale(1.08);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 18px 24px;
+        }
+
+        /* ============ EDGE TABS (visible when sidebar collapsed) ============ */
+        .edge-tab {
+            position: fixed;
+            top: 50%;
+            background: linear-gradient(135deg, var(--accent), #009ba3);
+            color: #0a0a0c;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            z-index: 19;
+            box-shadow: 0 4px 20px rgba(0, 212, 221, 0.45);
+            padding: 18px 8px;
+            font-size: 0.8rem;
+            letter-spacing: 1.5px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .edge-tab:hover {
+            padding-left: 14px;
+            padding-right: 14px;
+        }
+
+        #left-tab {
+            left: 0;
+            border-radius: 0 12px 12px 0;
+            transform: translate(-100%, -50%);
+        }
+        #left-tab.visible {
+            transform: translate(0, -50%);
+        }
+
+        #right-tab {
+            right: 0;
+            border-radius: 12px 0 0 12px;
+            transform: translate(100%, -50%);
+        }
+        #right-tab.visible {
+            transform: translate(0, -50%);
+        }
+
+        .edge-tab .icon {
+            writing-mode: horizontal-tb;
+            font-size: 1.1rem;
+        }
+
+        /* ============ SCROLLBAR ============ */
+        .sidebar-content::-webkit-scrollbar { width: 6px; }
+        .sidebar-content::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 221, 0.3);
+            border-radius: 3px;
+        }
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 212, 221, 0.6);
+        }
+
+        /* ============ LEFT SIDEBAR (CONTROLS) ============ */
+        .section-title {
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            margin: 20px -18px 12px -18px;
+            padding: 9px 18px;
+            font-weight: 700;
+            background: linear-gradient(90deg, rgba(0,212,221,0.22) 0%, rgba(0,212,221,0.04) 100%);
+            border-top: 1px solid rgba(0,212,221,0.35);
+            border-bottom: 1px solid rgba(0,212,221,0.12);
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+        .section-title:first-child {
+            margin-top: -14px;
+            border-top: none;
+        }
+
+        .control-group {
+            margin-bottom: 11px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group label .label-text {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .color-chip {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            margin: 4px 0;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(0, 212, 221, 0.6);
+            transition: transform 0.15s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px rgba(0, 212, 221, 0.6);
+        }
+
+        .value-display {
+            font-weight: bold;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+            background: var(--accent-soft);
+            padding: 1px 7px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+        }
+
+        .radio-group {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 3px;
+            border-radius: 8px;
+            gap: 3px;
+        }
+        .radio-option { flex: 1; }
+        .radio-option input { display: none; }
+        .radio-option label {
+            display: block;
+            padding: 7px;
+            cursor: pointer;
+            border-radius: 6px;
+            margin: 0;
+            font-size: 0.82rem;
+            transition: 0.2s;
+            text-align: center;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+        .radio-option input:checked + label.pos {
+            background: var(--pos);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
+        }
+        .radio-option input:checked + label.neg {
+            background: var(--neg);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(46, 213, 115, 0.4);
+        }
+
+        .toggle-btn {
+            width: 100%;
+            padding: 9px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--panel-border);
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 6px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        .toggle-btn:hover { background: rgba(255, 255, 255, 0.08); }
+        .toggle-btn.active {
+            background: var(--accent-soft);
+            border-color: var(--accent);
+            color: var(--text);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #555;
+            transition: 0.2s;
+        }
+        .toggle-btn.active .status-dot {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .preset-btn {
+            padding: 7px 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--panel-border);
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: inherit;
+            text-align: center;
+        }
+        .preset-btn:hover {
+            background: var(--accent-soft);
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        button.action-btn {
+            width: 100%;
+            padding: 11px;
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            letter-spacing: 0.5px;
+        }
+        button.action-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+        button.action-btn:active { transform: translateY(0); }
+
+        /* ============ RIGHT SIDEBAR (PHYSICS LESSON) ============ */
+        .lesson-intro {
+            background: linear-gradient(135deg, rgba(0,212,221,0.08), rgba(0,212,221,0.02));
+            border: 1px solid rgba(0, 212, 221, 0.2);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 0.86rem;
+            line-height: 1.5;
+            color: var(--text-dim);
+            margin-bottom: 14px;
+        }
+        .lesson-intro strong { color: var(--text); }
+
+        details.lesson-section {
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: 0.2s;
+            overflow: hidden;
+        }
+        details.lesson-section[open] {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(0, 212, 221, 0.3);
+        }
+
+        details.lesson-section summary {
+            padding: 12px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            list-style: none;
+            transition: 0.2s;
+        }
+        details.lesson-section summary::-webkit-details-marker { display: none; }
+        details.lesson-section summary::after {
+            content: '+';
+            margin-left: auto;
+            color: var(--accent);
+            font-size: 1.3rem;
+            font-weight: 300;
+            line-height: 1;
+            transition: 0.2s;
+        }
+        details.lesson-section[open] summary::after {
+            content: '−';
+            transform: rotate(0);
+        }
+        details.lesson-section summary:hover { background: rgba(255, 255, 255, 0.03); }
+
+        .step-num {
+            background: var(--accent);
+            color: #0a0a0c;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: inline-grid;
+            place-items: center;
+            font-size: 0.78rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .lesson-body {
+            padding: 4px 16px 16px 16px;
+            font-size: 0.86rem;
+            line-height: 1.62;
+            color: var(--text-dim);
+        }
+        .lesson-body p { margin: 8px 0; }
+        .lesson-body strong { color: var(--text); }
+        .lesson-body ul { padding-left: 18px; margin: 8px 0; }
+        .lesson-body li { margin: 5px 0; }
+
+        .equation-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 10px 14px;
+            margin: 10px 0;
+            text-align: center;
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .callout {
+            background: rgba(245, 158, 11, 0.08);
+            border-left: 3px solid var(--warn);
+            border-radius: 0 8px 8px 0;
+            padding: 10px 14px;
+            margin: 12px 0;
+            font-size: 0.84rem;
+            color: var(--text);
+        }
+        .callout .callout-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            color: var(--warn);
+            margin-bottom: 4px;
+            font-size: 0.82rem;
+        }
+
+        .key-insight {
+            background: rgba(0, 212, 221, 0.06);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 10px 14px;
+            margin: 12px 0;
+            font-size: 0.86rem;
+            color: var(--text);
+        }
+        .key-insight .insight-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 4px;
+            font-size: 0.82rem;
+        }
+
+        .v-yellow { color: var(--v-yellow); font-weight: 700; }
+        .v-blue   { color: var(--v-blue);   font-weight: 700; }
+        .v-purple { color: var(--v-purple); font-weight: 700; }
+        .v-pink   { color: var(--v-pink);   font-weight: 700; }
+
+        .formula-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 0.84rem;
+        }
+        .formula-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .formula-table td:first-child {
+            color: var(--text-dim);
+            width: 45%;
+        }
+        .formula-table td:last-child {
+            color: var(--text);
+            text-align: right;
+        }
+        .formula-table tr:last-child td { border-bottom: none; }
+
+        .try-this li {
+            margin: 8px 0;
+            padding-left: 4px;
+        }
+        .try-this li::marker { color: var(--accent); font-weight: bold; }
+
+        .katex { font-size: 1.02em !important; }
+        .katex-display { margin: 0.4em 0 !important; }
+
+        /* ============ OVERLAY ELEMENTS ============ */
+        #instructions {
+            position: fixed;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            padding: 9px 18px;
+            border-radius: 22px;
+            font-size: 0.78rem;
+            pointer-events: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            z-index: 10;
+            color: var(--text-dim);
+        }
+        #instructions small { color: var(--accent); }
+        #instructions kbd {
+            background: rgba(255,255,255,0.1);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85em;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text);
+        }
+
+        #view-indicator {
+            position: fixed;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--accent), #009ba3);
+            color: #0a0a0c;
+            padding: 8px 18px;
+            border-radius: 22px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0, 212, 221, 0.4);
+            z-index: 15;
+        }
+
+        /* Quick read-out HUD */
+        #physics-hud {
+            position: fixed;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            padding: 10px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.82rem;
+            display: flex;
+            gap: 18px;
+            z-index: 10;
+            color: var(--text-dim);
+        }
+        #physics-hud .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        #physics-hud .hud-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+        #physics-hud .hud-value {
+            font-weight: bold;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+        }
+
+        @media (max-width: 800px) {
+            #left-sidebar, #right-sidebar { width: calc(100vw - 32px); }
+            #physics-hud { display: none; }
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+    <div id="view-indicator">2D CIRCULAR PROFILE</div>
+
+    <!-- Edge tabs (visible when sidebar collapsed) -->
+    <button id="left-tab" class="edge-tab">
+        <span class="icon">⚙</span>
+        <span>CONTROLS</span>
+    </button>
+    <button id="right-tab" class="edge-tab">
+        <span class="icon">📘</span>
+        <span>PHYSICS GUIDE</span>
+    </button>
+
+    <!-- ===================== LEFT SIDEBAR: CONTROLS ===================== -->
+    <aside id="left-sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h2>⚙ Simulation Controls</h2>
+            <button class="collapse-btn" data-target="left" title="Collapse panel">◀</button>
+        </div>
+        <div class="sidebar-content">
+
+            <div class="section-title">Quick Presets</div>
+            <div class="preset-grid">
+                <button class="preset-btn" data-preset="straight">θ = 0° (straight)</button>
+                <button class="preset-btn" data-preset="circle">θ = 90° (circle)</button>
+                <button class="preset-btn" data-preset="helix">θ = 45° (helix)</button>
+                <button class="preset-btn" data-preset="tight">High B (tight)</button>
+            </div>
+
+            <div class="section-title">Particle Properties</div>
+
+            <div class="control-group">
+                <label>Charge Sign</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="charge-pos" name="chargeSign" value="1" checked>
+                        <label for="charge-pos" class="pos">Positive (+)</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="charge-neg" name="chargeSign" value="-1">
+                        <label for="charge-neg" class="neg">Negative (−)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <span class="label-text">Charge Magnitude |q|</span>
+                    <span id="qmag-val" class="value-display">2</span>
+                </label>
+                <input type="range" id="chargeMag" min="1" max="5" step="1" value="2">
+            </div>
+
+            <div class="section-title">Initial Velocity</div>
+
+            <div class="control-group">
+                <label>
+                    <span class="label-text">Speed v</span>
+                    <span id="v-val" class="value-display">12</span>
+                </label>
+                <input type="range" id="velocity" min="5" max="30" value="12">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <span class="label-text">Entry Angle θ (to B)</span>
+                    <span id="angle-val" class="value-display">30°</span>
+                </label>
+                <input type="range" id="angle" min="0" max="90" value="30">
+            </div>
+
+            <div class="section-title">Magnetic Field</div>
+
+            <div class="control-group">
+                <label>
+                    <span class="label-text">B-Field Strength</span>
+                    <span id="b-val" class="value-display">2.5</span>
+                </label>
+                <input type="range" id="bStrength" min="0.2" max="5.0" step="0.1" value="2.5">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <span class="label-text">Field Length (along B)</span>
+                    <span id="length-val" class="value-display">70</span>
+                </label>
+                <input type="range" id="fieldLength" min="30" max="120" step="2" value="70">
+            </div>
+            <div class="control-group">
+                <label>
+                    <span class="label-text">Field Height</span>
+                    <span id="height-val" class="value-display">25</span>
+                </label>
+                <input type="range" id="fieldHeight" min="10" max="50" step="2" value="25">
+            </div>
+            <div class="control-group">
+                <label>
+                    <span class="label-text">Field Width</span>
+                    <span id="width-val" class="value-display">25</span>
+                </label>
+                <input type="range" id="fieldWidth" min="10" max="50" step="2" value="25">
+            </div>
+
+            <div class="section-title">Vector Display</div>
+            <button id="toggle-v" class="toggle-btn active">
+                <span>Show velocity vectors <small style="color:var(--text-muted)">(v, v∥, v⊥)</small></span>
+                <div class="status-dot"></div>
+            </button>
+            <button id="toggle-f" class="toggle-btn active">
+                <span>Show magnetic force <small style="color:var(--text-muted)">(F_B)</small></span>
+                <div class="status-dot"></div>
+            </button>
+
+            <button id="play-pause-btn" class="action-btn" style="background: linear-gradient(135deg, #2ed573, #20bf6b);">▶ Start Animation</button>
+            <button id="reset-btn" class="action-btn" style="background: rgba(255,255,255,0.08); border:1px solid var(--panel-border);">↺ Reset Path</button>
+        </div>
+    </aside>
+
+    <!-- ===================== RIGHT SIDEBAR: PHYSICS GUIDE ===================== -->
+    <aside id="right-sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h2>📘 Physics Guide — H2 Lesson</h2>
+            <button class="collapse-btn" data-target="right" title="Collapse panel">▶</button>
+        </div>
+        <div class="sidebar-content">
+
+            <div class="lesson-intro">
+                A charged particle enters a uniform magnetic field of flux density $B$ at an angle $\theta$ to the field. The motion that follows is one of the most elegant results in H2 Physics. <strong>Let's break it down step-by-step.</strong>
+            </div>
+
+            <details class="lesson-section" open>
+                <summary><span class="step-num">1</span> The Scenario</summary>
+                <div class="lesson-body">
+                    <p>A particle of charge $q$ and mass $m$ enters a uniform magnetic field of flux density $B$ (pointing in the $+x$ direction) with speed $v$ at an angle $\theta$ to the field.</p>
+                    <p>The magnitude of the magnetic force on a moving charged particle is given by:</p>
+                    <div class="equation-box">$F = Bqv\sin\theta$</div>
+                    <p>where $\theta$ is the angle between the velocity and the magnetic field. The <strong>direction</strong> of $F$ is found using <strong>Fleming's Left-Hand Rule</strong> for a positive charge (reverse it for a negative charge).</p>
+                    <div class="key-insight">
+                        <div class="insight-title">💡 Key idea</div>
+                        The magnetic force is always <strong>perpendicular to the velocity</strong>, so it <strong>does no work</strong> on the charge — the speed $v$ stays constant; only the direction changes.
+                    </div>
+                </div>
+            </details>
+
+            <details class="lesson-section">
+                <summary><span class="step-num">2</span> Resolve the Velocity</summary>
+                <div class="lesson-body">
+                    <p>The trick to handling 3D motion is to <strong>resolve the velocity into two perpendicular components</strong>:</p>
+                    <div class="equation-box">
+                        $v_\parallel = v\cos\theta \quad\text{(along } B\text{)}$ <br>
+                        $v_\perp = v\sin\theta \quad\text{(perpendicular to } B\text{)}$
+                    </div>
+                    <p>We then analyse each component <strong>independently</strong>, then superpose the two motions to recover the full 3D trajectory.</p>
+                    <ul>
+                        <li><span class="v-blue">v∥</span> — the component <em>parallel</em> to $B$</li>
+                        <li><span class="v-purple">v⊥</span> — the component <em>perpendicular</em> to $B$</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="lesson-section">
+                <summary><span class="step-num">3</span> View Along $B$ (Side X)</summary>
+                <div class="lesson-body">
+                    <p>Look along the magnetic field. From this angle, you only see <span class="v-blue">v∥</span>, which points in the <em>same direction</em> as $B$.</p>
+                    <p>The angle between $v_\parallel$ and $B$ is $0°$, so:</p>
+                    <div class="equation-box">$F_\parallel = Bqv_\parallel \sin(0°) = 0$</div>
+                    <p><strong>No force ⇒ no acceleration ⇒ constant velocity.</strong></p>
+                    <p>The particle drifts along the field direction in a perfectly straight line at speed $v_\parallel = v\cos\theta$.</p>
+                </div>
+            </details>
+
+            <details class="lesson-section">
+                <summary><span class="step-num">4</span> View Perpendicular to $B$ (Side Y)</summary>
+                <div class="lesson-body">
+                    <p>Now look at the particle from the side — so $B$ goes <em>into</em> the page (×). Only the component <span class="v-purple">v⊥</span> matters here, and it is perpendicular to $B$ ($\theta = 90°$).</p>
+                    <p>By <strong>Fleming's Left-Hand Rule</strong>, the magnetic force has magnitude:</p>
+                    <div class="equation-box">$F_B = Bqv_\perp$</div>
+                    <p>This force is <strong>always perpendicular</strong> to <span class="v-purple">v⊥</span>. It cannot change the particle's speed, only bend its direction. This is the exact condition for <strong>uniform circular motion</strong>.</p>
+                    <p>Setting $F_B$ equal to the centripetal force $\dfrac{mv_\perp^2}{r}$:</p>
+                    <div class="equation-box">$Bqv_\perp = \dfrac{mv_\perp^2}{r} \;\;\Rightarrow\;\; r = \dfrac{mv_\perp}{|q|B}$</div>
+                    <p>The period of one full orbit is:</p>
+                    <div class="equation-box">$T = \dfrac{2\pi r}{v_\perp} = \dfrac{2\pi m}{|q|B}$</div>
+                    <div class="key-insight">
+                        <div class="insight-title">💡 Striking result</div>
+                        $T$ depends only on $m$, $|q|$ and $B$ — <strong>not on $v_\perp$</strong>! Faster particles trace bigger circles, but each orbit still takes the same time.
+                    </div>
+                </div>
+            </details>
+
+            <details class="lesson-section">
+                <summary><span class="step-num">5</span> Combine → Helical Motion</summary>
+                <div class="lesson-body">
+                    <p>Now <strong>superpose</strong> the two motions:</p>
+                    <ul>
+                        <li><span class="v-blue">v∥</span> → straight-line drift along $B$</li>
+                        <li><span class="v-purple">v⊥</span> → circular motion in the plane perpendicular to $B$</li>
+                    </ul>
+                    <p>The result is a <strong>helix</strong> — a 3D spiral, like a stretched spring wound along $B$.</p>
+                    <p>The <strong>pitch</strong> (distance the particle advances along $B$ during one full circular orbit):</p>
+                    <div class="equation-box">$p = v_\parallel \, T = \dfrac{2\pi m \, v\cos\theta}{|q|B}$</div>
+                    <div class="callout">
+                        <div class="callout-title">⚡ Try it!</div>
+                        Drag the camera to look exactly down the X-axis to see the pure <strong>circle</strong>, or down the Z-axis to see the helix from the side.
+                    </div>
+                </div>
+            </details>
+
+            <details class="lesson-section">
+                <summary><span class="step-num">6</span> Formula Sheet</summary>
+                <div class="lesson-body">
+                    <table class="formula-table">
+                        <tr><td>Force on moving charge</td><td>$F = Bqv\sin\theta$</td></tr>
+                        <tr><td>Radius of helix</td><td>$r = \dfrac{mv\sin\theta}{|q|B}$</td></tr>
+                        <tr><td>Period</td><td>$T = \dfrac{2\pi m}{|q|B}$</td></tr>
+                        <tr><td>Frequency</td><td>$f = \dfrac{|q|B}{2\pi m}$</td></tr>
+                        <tr><td>Pitch</td><td>$p = \dfrac{2\pi m v\cos\theta}{|q|B}$</td></tr>
+                    </table>
+                </div>
+            </details>
+
+            <details class="lesson-section">
+                <summary><span class="step-num">?</span> Test Yourself</summary>
+                <div class="lesson-body">
+                    <ol class="try-this">
+                        <li>Set $\theta = 0°$. What does the path look like? Why is there no force?</li>
+                        <li>Set $\theta = 90°$. What shape is the path now? Can you predict the radius?</li>
+                        <li>Flip the charge sign. Which way does the helix wind? Use FLHR to justify.</li>
+                        <li>Double $B$ while keeping everything else fixed. What happens to $r$, $T$ and the pitch $p$?</li>
+                        <li>Double $v$ at fixed $\theta$. Does $T$ change? Does $r$ change? Does $p$ change?</li>
+                        <li>From your answers above, explain in one sentence why $T$ is "geometry-free".</li>
+                    </ol>
+                </div>
+            </details>
+
+            <details class="lesson-section">
+                <summary><span class="step-num">★</span> Real-World Connection</summary>
+                <div class="lesson-body">
+                    <p>Helical motion of charged particles in magnetic fields explains:</p>
+                    <ul>
+                        <li><strong>Auroras</strong> — solar wind protons and electrons spiral along Earth's field lines toward the poles.</li>
+                        <li><strong>Mass spectrometers</strong> — measure $m/q$ from the radius $r = mv/(qB)$.</li>
+                        <li><strong>Cyclotrons</strong> — exploit the $v$-independent period $T$ to keep accelerating particles in resonance.</li>
+                        <li><strong>Magnetic confinement fusion</strong> (tokamaks) — keep hot plasma spiralling along field lines, away from the walls.</li>
+                    </ul>
+                </div>
+            </details>
+
+        </div>
+    </aside>
+
+    <!-- Live physics readout -->
+    <div id="physics-hud">
+        <div class="hud-item"><span class="hud-label">Radius r</span><span class="hud-value" id="hud-r">—</span></div>
+        <div class="hud-item"><span class="hud-label">Period T</span><span class="hud-value" id="hud-T">—</span></div>
+        <div class="hud-item"><span class="hud-label">Pitch p</span><span class="hud-value" id="hud-p">—</span></div>
+        <div class="hud-item"><span class="hud-label">v∥ / v⊥</span><span class="hud-value" id="hud-vsplit">—</span></div>
+    </div>
+
+    <div id="instructions">
+        🖱 <kbd>Drag</kbd> rotate &nbsp;·&nbsp; 📜 <kbd>Scroll</kbd> zoom &nbsp;·&nbsp; <kbd>Space</kbd> play/pause<br>
+        <small>Align camera down the X-axis to snap to 2D circular view</small>
+    </div>
+
+    <script>
+        // ===================== SIDEBAR COLLAPSE LOGIC =====================
+        const leftSidebar = document.getElementById('left-sidebar');
+        const rightSidebar = document.getElementById('right-sidebar');
+        const leftTab = document.getElementById('left-tab');
+        const rightTab = document.getElementById('right-tab');
+
+        function setLeftCollapsed(collapsed) {
+            leftSidebar.classList.toggle('collapsed', collapsed);
+            leftTab.classList.toggle('visible', collapsed);
+        }
+        function setRightCollapsed(collapsed) {
+            rightSidebar.classList.toggle('collapsed', collapsed);
+            rightTab.classList.toggle('visible', collapsed);
+        }
+
+        document.querySelectorAll('.collapse-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.target === 'left') setLeftCollapsed(true);
+                else setRightCollapsed(true);
+            });
+        });
+        leftTab.addEventListener('click', () => setLeftCollapsed(false));
+        rightTab.addEventListener('click', () => setRightCollapsed(false));
+
+        // ===================== THREE.JS SIMULATION =====================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(85, 35, 75);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(30, 50, 30);
+        scene.add(dirLight);
+
+        // Kinematic state
+        let particle, pathLine, pathGeometry;
+        let boxLine, boundary2D, fieldLinesGroup;
+        let pos = new THREE.Vector3();
+        let vel = new THREE.Vector3();
+        let calculatedTotalCharge = 2;
+        let trailPoints = [];
+        const maxTrailPoints = 5000;
+        const dt = 0.008;
+        let isPaused = true;
+
+        let showV = true, showF = true;
+        let arrowV, arrowVPar, arrowVPerp, arrowF;
+        let spriteV, spriteVPar, spriteVPerp, spriteF;
+
+        // ============ Math Sprite Factory ============
+        // Renders crisp math labels (v, v_∥, v_⊥, F_B) as 3D billboards.
+        // Uses REAL italic font (no fake-skew) and draws parallel/perpendicular
+        // glyphs by hand for guaranteed quality regardless of system fonts.
+        function createMathSprite(baseText, subKind, colorStr) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = colorStr;
+
+            const mainFont = 'italic 700 64px "Cambria Math", "STIX Two Math", "Times New Roman", Georgia, serif';
+            const subFont  = 'italic 700 38px "Cambria Math", "STIX Two Math", "Times New Roman", Georgia, serif';
+
+            ctx.font = mainFont;
+            ctx.textBaseline = 'alphabetic';
+            ctx.textAlign = 'left';
+
+            const baseWidth = ctx.measureText(baseText).width;
+
+            // Estimate subscript width so the whole label can be centered
+            let subWidth = 0;
+            if (subKind === 'par')  subWidth = 26;
+            else if (subKind === 'perp') subWidth = 30;
+            else if (subKind === 'B') {
+                ctx.font = subFont;
+                subWidth = ctx.measureText('B').width;
+                ctx.font = mainFont;
+            }
+
+            const totalWidth = baseWidth + subWidth + (subKind ? 4 : 0);
+            const startX = (canvas.width - totalWidth) / 2;
+            const baseY  = 84;
+
+            // Draw the variable letter (real italic — no skew transform)
+            ctx.fillText(baseText, startX, baseY);
+
+            const subX = startX + baseWidth + 4;
+
+            if (subKind === 'par') {
+                // Two slanted parallel lines (// shape, matches italic slant direction)
+                ctx.strokeStyle = colorStr;
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(subX + 2,  baseY + 6);   // bottom-left of first slash
+                ctx.lineTo(subX + 10, baseY - 16);  // top-right
+                ctx.moveTo(subX + 14, baseY + 6);   // bottom-left of second slash
+                ctx.lineTo(subX + 22, baseY - 16);  // top-right
+                ctx.stroke();
+            } else if (subKind === 'perp') {
+                // ⊥ symbol drawn by hand
+                ctx.strokeStyle = colorStr;
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(subX + 2,  baseY + 6);   // horizontal bar (left)
+                ctx.lineTo(subX + 28, baseY + 6);   // horizontal bar (right)
+                ctx.moveTo(subX + 15, baseY + 6);   // vertical stem (bottom)
+                ctx.lineTo(subX + 15, baseY - 16);  // vertical stem (top)
+                ctx.stroke();
+            } else if (subKind === 'B') {
+                ctx.font = subFont;
+                ctx.fillText('B', subX, baseY + 10);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+            const sprite = new THREE.Sprite(mat);
+            sprite.scale.set(3, 1.5, 1);
+            return sprite;
+        }
+
+        function generate2DSymbol(type, size) {
+            const group = new THREE.Group();
+            const s = size * 0.06;
+            if (type === 'cross') {
+                const mat = new THREE.LineBasicMaterial({ color: 0x00adb5, opacity: 0.45, transparent: true });
+                const geo1 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -s, -s), new THREE.Vector3(0, s, s)]);
+                const geo2 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -s, s), new THREE.Vector3(0, s, -s)]);
+                group.add(new THREE.Line(geo1, mat), new THREE.Line(geo2, mat));
+            } else if (type === 'dot') {
+                const points = [];
+                const r = s * 0.35;
+                for (let i = 0; i <= 12; i++) {
+                    const theta = (i / 12) * Math.PI * 2;
+                    points.push(new THREE.Vector3(0, Math.cos(theta) * r, Math.sin(theta) * r));
+                }
+                const dotGeo = new THREE.BufferGeometry().setFromPoints(points);
+                const mat = new THREE.LineBasicMaterial({ color: 0x00adb5, opacity: 0.8, transparent: true });
+                group.add(new THREE.Line(dotGeo, mat));
+            }
+            return group;
+        }
+
+        function updateVectorArrow(arrow, sprite, origin, direction, magnitude, sF, lblPadding = 0.4) {
+            if (!arrow.visible) { sprite.visible = false; return; }
+            arrow.position.copy(origin);
+            let dir = direction.clone().normalize();
+            arrow.setDirection(dir);
+            let arrowLen = magnitude * sF;
+            if (arrowLen < 0.1) arrowLen = 0.1;
+            let headLen = Math.min(0.4, arrowLen * 0.3);
+            let headWidth = Math.min(0.2, arrowLen * 0.15);
+            arrow.setLength(arrowLen, headLen, headWidth);
+            sprite.position.copy(origin).addScaledVector(dir, arrowLen + lblPadding);
+            sprite.visible = true;
+        }
+
+        function createBFieldVisuals() {
+            if (boxLine) scene.remove(boxLine);
+            if (boundary2D) scene.remove(boundary2D);
+            if (fieldLinesGroup) scene.remove(fieldLinesGroup);
+
+            fieldLinesGroup = new THREE.Group();
+
+            const fLength = parseFloat(document.getElementById('fieldLength').value);
+            const fHeight = parseFloat(document.getElementById('fieldHeight').value);
+            const fWidth = parseFloat(document.getElementById('fieldWidth').value);
+            const bStr = parseFloat(document.getElementById('bStrength').value);
+
+            const boxGeo = new THREE.BoxGeometry(fLength, fHeight, fWidth);
+            const edges = new THREE.EdgesGeometry(boxGeo);
+            boxLine = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.35 }));
+            boxLine.position.set(fLength / 2, 0, 0);
+            scene.add(boxLine);
+
+            const rectPoints = [
+                new THREE.Vector3(0, -fHeight/2, -fWidth/2),
+                new THREE.Vector3(0, fHeight/2, -fWidth/2),
+                new THREE.Vector3(0, fHeight/2, fWidth/2),
+                new THREE.Vector3(0, -fHeight/2, fWidth/2),
+                new THREE.Vector3(0, -fHeight/2, -fWidth/2)
+            ];
+            const rectGeo = new THREE.BufferGeometry().setFromPoints(rectPoints);
+            boundary2D = new THREE.Line(rectGeo, new THREE.LineBasicMaterial({ color: 0x00adb5, transparent: true, opacity: 0.8 }));
+            boundary2D.visible = false;
+            scene.add(boundary2D);
+
+            const stepY = Math.max(2.5, 10.0 / bStr);
+            const stepZ = Math.max(2.5, 10.0 / bStr);
+            const arrowDir = new THREE.Vector3(1, 0, 0);
+
+            for (let y = -fHeight/2 + stepY/2; y < fHeight/2; y += stepY) {
+                for (let z = -fWidth/2 + stepZ/2; z < fWidth/2; z += stepZ) {
+                    const points = [new THREE.Vector3(0, y, z), new THREE.Vector3(fLength, y, z)];
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                    const fieldLine = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x1f242e, transparent: true, opacity: 0.4 }));
+                    fieldLine.userData = { is3DElement: true };
+                    fieldLinesGroup.add(fieldLine);
+
+                    for (let x = fLength * 0.15; x < fLength; x += fLength * 0.35) {
+                        const arrow = new THREE.ArrowHelper(arrowDir, new THREE.Vector3(x, y, z), 0.45, 0x00adb5, 0.27, 0.135);
+                        arrow.userData = { is3DElement: true };
+                        fieldLinesGroup.add(arrow);
+                    }
+
+                    const crossGlyph = generate2DSymbol('cross', Math.min(stepY, stepZ));
+                    crossGlyph.position.set(0.02, y, z);
+                    crossGlyph.name = "glyph_cross";
+                    crossGlyph.visible = false;
+                    fieldLinesGroup.add(crossGlyph);
+
+                    const dotGlyph = generate2DSymbol('dot', Math.min(stepY, stepZ));
+                    dotGlyph.position.set(fLength - 0.02, y, z);
+                    dotGlyph.name = "glyph_dot";
+                    dotGlyph.visible = false;
+                    fieldLinesGroup.add(dotGlyph);
+                }
+            }
+            scene.add(fieldLinesGroup);
+            controls.target.set(fLength / 2, 0, 0);
+        }
+
+        function initVectorArrows() {
+            if (arrowV) scene.remove(arrowV); if (arrowVPar) scene.remove(arrowVPar);
+            if (arrowVPerp) scene.remove(arrowVPerp); if (arrowF) scene.remove(arrowF);
+            if (spriteV) scene.remove(spriteV); if (spriteVPar) scene.remove(spriteVPar);
+            if (spriteVPerp) scene.remove(spriteVPerp); if (spriteF) scene.remove(spriteF);
+
+            const dummyDir = new THREE.Vector3(1, 0, 0);
+            const dummyOrig = new THREE.Vector3(0, 0, 0);
+
+            arrowV = new THREE.ArrowHelper(dummyDir, dummyOrig, 1, 0xffeb3b, 0.4, 0.2);
+            arrowVPar = new THREE.ArrowHelper(dummyDir, dummyOrig, 1, 0x2196f3, 0.3, 0.15);
+            arrowVPerp = new THREE.ArrowHelper(dummyDir, dummyOrig, 1, 0x9c27b0, 0.3, 0.15);
+            arrowF = new THREE.ArrowHelper(dummyDir, dummyOrig, 1, 0xe91e63, 0.4, 0.2);
+
+            spriteV     = createMathSprite("v", null,   "#ffeb3b");
+            spriteVPar  = createMathSprite("v", "par",  "#2196f3");
+            spriteVPerp = createMathSprite("v", "perp", "#9c27b0");
+            spriteF     = createMathSprite("F", "B",    "#e91e63");
+
+            scene.add(arrowV, arrowVPar, arrowVPerp, arrowF, spriteV, spriteVPar, spriteVPerp, spriteF);
+        }
+
+        function updateUIReadouts() {
+            document.getElementById('angle-val').innerText = document.getElementById('angle').value + "°";
+            document.getElementById('v-val').innerText = document.getElementById('velocity').value;
+            document.getElementById('b-val').innerText = parseFloat(document.getElementById('bStrength').value).toFixed(1);
+            document.getElementById('length-val').innerText = document.getElementById('fieldLength').value;
+            document.getElementById('height-val').innerText = document.getElementById('fieldHeight').value;
+            document.getElementById('width-val').innerText = document.getElementById('fieldWidth').value;
+            document.getElementById('qmag-val').innerText = document.getElementById('chargeMag').value;
+
+            const sign = parseInt(document.querySelector('input[name="chargeSign"]:checked').value);
+            const mag = parseInt(document.getElementById('chargeMag').value);
+            calculatedTotalCharge = sign * mag;
+
+            // HUD physics readouts (using "natural units" of the sim)
+            const v = parseFloat(document.getElementById('velocity').value);
+            const theta = (parseFloat(document.getElementById('angle').value) * Math.PI) / 180;
+            const B = parseFloat(document.getElementById('bStrength').value);
+            const qAbs = Math.abs(calculatedTotalCharge);
+            const vPar = v * Math.cos(theta);
+            const vPerp = v * Math.sin(theta);
+            // In the sim, omega = qB (mass implicitly 1), so r = vPerp/(qB), T = 2π/(qB), p = vPar*T
+            const omega = qAbs * B;
+            const r = omega > 0 ? vPerp / omega : Infinity;
+            const T = omega > 0 ? (2 * Math.PI) / omega : Infinity;
+            const p = T === Infinity ? Infinity : vPar * T;
+
+            document.getElementById('hud-r').innerText = isFinite(r) ? r.toFixed(2) : '∞';
+            document.getElementById('hud-T').innerText = isFinite(T) ? T.toFixed(2) : '∞';
+            document.getElementById('hud-p').innerText = isFinite(p) ? p.toFixed(2) : '∞';
+            document.getElementById('hud-vsplit').innerText = vPar.toFixed(1) + ' / ' + vPerp.toFixed(1);
+        }
+
+        function initParticle() {
+            updateUIReadouts();
+            createBFieldVisuals();
+            initVectorArrows();
+
+            if (particle) scene.remove(particle);
+            if (pathLine) scene.remove(pathLine);
+
+            const pColor = calculatedTotalCharge > 0 ? 0xff4757 : 0x2ed573;
+            const pGeo = new THREE.SphereGeometry(0.25, 32, 32);
+            const pMat = new THREE.MeshPhongMaterial({ color: pColor, emissive: pColor, emissiveIntensity: 0.5 });
+            particle = new THREE.Mesh(pGeo, pMat);
+            scene.add(particle);
+
+            pos.set(0, 0, 0);
+            particle.position.copy(pos);
+
+            const speed = parseFloat(document.getElementById('velocity').value);
+            const theta = (parseFloat(document.getElementById('angle').value) * Math.PI) / 180;
+
+            vel.x = speed * Math.cos(theta);
+            vel.y = speed * Math.sin(theta);
+            vel.z = 0;
+
+            trailPoints = [pos.clone()];
+            pathGeometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
+            pathLine = new THREE.Line(pathGeometry, new THREE.LineBasicMaterial({ color: pColor }));
+            scene.add(pathLine);
+        }
+
+        function togglePlayback() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('play-pause-btn');
+            if (isPaused) {
+                btn.innerHTML = "▶ Resume Animation";
+                btn.style.background = "linear-gradient(135deg, #2ed573, #20bf6b)";
+            } else {
+                btn.innerHTML = "❚❚ Pause Animation";
+                btn.style.background = "linear-gradient(135deg, #ff4757, #c0392b)";
+            }
+        }
+
+        function triggerReset() {
+            initParticle();
+            isPaused = true;
+            const btn = document.getElementById('play-pause-btn');
+            btn.innerHTML = "▶ Start Animation";
+            btn.style.background = "linear-gradient(135deg, #2ed573, #20bf6b)";
+        }
+
+        // ============ Presets ============
+        function applyPreset(name) {
+            const set = (id, val) => { document.getElementById(id).value = val; };
+            if (name === 'straight') {
+                set('angle', 0); set('velocity', 15); set('bStrength', 2.5); set('chargeMag', 2);
+            } else if (name === 'circle') {
+                set('angle', 90); set('velocity', 12); set('bStrength', 2.5); set('chargeMag', 2);
+            } else if (name === 'helix') {
+                set('angle', 45); set('velocity', 14); set('bStrength', 2.5); set('chargeMag', 2);
+            } else if (name === 'tight') {
+                set('angle', 60); set('velocity', 10); set('bStrength', 4.5); set('chargeMag', 3);
+            }
+            triggerReset();
+        }
+
+        // ============ Event Wiring ============
+        const inputs = ['angle', 'velocity', 'bStrength', 'fieldLength', 'fieldHeight', 'fieldWidth', 'chargeMag'];
+        inputs.forEach(id => document.getElementById(id).addEventListener('input', triggerReset));
+        document.getElementById('charge-pos').addEventListener('change', triggerReset);
+        document.getElementById('charge-neg').addEventListener('change', triggerReset);
+        document.getElementById('reset-btn').addEventListener('click', triggerReset);
+        document.getElementById('play-pause-btn').addEventListener('click', togglePlayback);
+
+        document.getElementById('toggle-v').addEventListener('click', function() {
+            showV = !showV; this.classList.toggle('active', showV);
+        });
+        document.getElementById('toggle-f').addEventListener('click', function() {
+            showF = !showF; this.classList.toggle('active', showF);
+        });
+
+        document.querySelectorAll('.preset-btn').forEach(b => {
+            b.addEventListener('click', () => applyPreset(b.dataset.preset));
+        });
+
+        // Blur any clicked button. Without this, the button keeps keyboard
+        // focus and pressing Space re-activates that button (e.g. the collapse
+        // button) instead of reaching our keydown handler below.
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (btn) btn.blur();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            // Only block Space inside text inputs / sliders so the user can still
+            // type / nudge sliders without triggering play-pause.
+            if (e.code === 'Space' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                e.preventDefault();
+                togglePlayback();
+            }
+        });
+
+        triggerReset();
+
+        // ============ Main Animation Loop ============
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const fLength = parseFloat(document.getElementById('fieldLength').value);
+            const fHeight = parseFloat(document.getElementById('fieldHeight').value);
+            const fWidth = parseFloat(document.getElementById('fieldWidth').value);
+            const currentB = parseFloat(document.getElementById('bStrength').value);
+
+            let camDir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+            const viewIndicator = document.getElementById('view-indicator');
+
+            let displayCrosses = false;
+            let displayDots = false;
+            let is2DActive = false;
+
+            if (Math.abs(camDir.x) > 0.996) {
+                is2DActive = true;
+                camDir.y = 0; camDir.z = 0; camDir.x = Math.sign(camDir.x);
+                const dist = camera.position.distanceTo(controls.target);
+                camera.position.copy(camDir.multiplyScalar(dist)).add(controls.target);
+                camera.up.set(0, 1, 0);
+                viewIndicator.style.display = 'block';
+                if (camera.position.x < controls.target.x) displayCrosses = true;
+                else displayDots = true;
+            } else {
+                viewIndicator.style.display = 'none';
+            }
+
+            boxLine.visible = !is2DActive;
+            boundary2D.visible = is2DActive;
+
+            const targetX = displayCrosses ? 0 : fLength;
+            if (is2DActive) boundary2D.position.x = targetX;
+
+            fieldLinesGroup.children.forEach(child => {
+                if (child.userData.is3DElement) child.visible = !is2DActive;
+                else {
+                    if (child.name === "glyph_cross") child.visible = displayCrosses;
+                    if (child.name === "glyph_dot") child.visible = displayDots;
+                }
+            });
+
+            if (!isPaused) {
+                if (pos.x >= -20 && pos.x <= fLength + 100 && Math.abs(pos.y) <= fHeight * 2 && Math.abs(pos.z) <= fWidth * 2) {
+                    if (pos.x >= 0 && pos.x <= fLength && Math.abs(pos.y) <= fHeight/2 && Math.abs(pos.z) <= fWidth/2) {
+                        let omega = calculatedTotalCharge * currentB;
+                        if (Math.abs(omega) > 0.0001) {
+                            let cy = pos.y + vel.z / omega;
+                            let cz = pos.z - vel.y / omega;
+                            let alpha = -omega * dt;
+                            let cosA = Math.cos(alpha);
+                            let sinA = Math.sin(alpha);
+                            let vyOld = vel.y; let vzOld = vel.z;
+                            vel.y = vyOld * cosA - vzOld * sinA;
+                            vel.z = vyOld * sinA + vzOld * cosA;
+                            let dy = pos.y - cy; let dz = pos.z - cz;
+                            pos.y = cy + (dy * cosA - dz * sinA);
+                            pos.z = cz + (dy * sinA + dz * cosA);
+                            pos.x += vel.x * dt;
+                        } else {
+                            pos.copy(pos.addScaledVector(vel, dt));
+                        }
+                    } else {
+                        pos.x += vel.x * dt; pos.y += vel.y * dt; pos.z += vel.z * dt;
+                    }
+                    trailPoints.push(pos.clone());
+                    if (trailPoints.length > maxTrailPoints) trailPoints.shift();
+                }
+            }
+
+            if (is2DActive) {
+                particle.position.set(targetX, pos.y, pos.z);
+                let flatPoints = [];
+                for (let i = 0; i < trailPoints.length; i++) {
+                    let p = trailPoints[i].clone();
+                    p.x = targetX;
+                    flatPoints.push(p);
+                }
+                pathGeometry.setFromPoints(flatPoints);
+            } else {
+                particle.position.copy(pos);
+                pathGeometry.setFromPoints(trailPoints);
+            }
+
+            const sF = 0.18;
+            const activePos = new THREE.Vector3(is2DActive ? targetX : pos.x, pos.y, pos.z);
+
+            if (showV) {
+                arrowV.visible = true; arrowVPar.visible = true; arrowVPerp.visible = true;
+                let vDir = vel.clone().normalize();
+                updateVectorArrow(arrowV, spriteV, activePos, vDir, vel.length(), sF, 0.4);
+                if (is2DActive) spriteV.position.x = targetX;
+
+                if (is2DActive) {
+                    arrowVPar.visible = false; spriteVPar.visible = false;
+                } else {
+                    arrowVPar.visible = true;
+                    updateVectorArrow(arrowVPar, spriteVPar, activePos, new THREE.Vector3(Math.sign(vel.x), 0, 0), Math.abs(vel.x), sF, 0.3);
+                }
+
+                const vPerpVec = new THREE.Vector3(0, vel.y, vel.z);
+                const lenPerp = vPerpVec.length();
+                if (lenPerp > 0.001) {
+                    arrowVPerp.visible = true;
+                    updateVectorArrow(arrowVPerp, spriteVPerp, activePos, vPerpVec.clone().normalize(), lenPerp, sF, 0.3);
+                    if (is2DActive) spriteVPerp.position.x = targetX;
+                } else {
+                    arrowVPerp.visible = false; spriteVPerp.visible = false;
+                }
+            } else {
+                arrowV.visible = false; arrowVPar.visible = false; arrowVPerp.visible = false;
+                spriteV.visible = false; spriteVPar.visible = false; spriteVPerp.visible = false;
+            }
+
+            if (showF) {
+                const forceVec = new THREE.Vector3(0, calculatedTotalCharge * vel.z * currentB, -calculatedTotalCharge * vel.y * currentB);
+                const lenF = forceVec.length();
+                if (lenF > 0.01 && pos.x >= 0 && pos.x <= fLength && Math.abs(pos.y) <= fHeight/2 && Math.abs(pos.z) <= fWidth/2) {
+                    arrowF.visible = true;
+                    updateVectorArrow(arrowF, spriteF, activePos, forceVec.clone().normalize(), lenF, sF, 0.4);
+                    if (is2DActive) spriteF.position.x = targetX;
+                } else {
+                    arrowF.visible = false; spriteF.visible = false;
+                }
+            } else {
+                arrowF.visible = false; spriteF.visible = false;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
