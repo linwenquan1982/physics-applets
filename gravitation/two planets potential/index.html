@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gravitational Potential — Object Thrown Between Two Planets</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#11161d; --panel2:#161d26; --line:#232c37;
+    --text:#dbe4ee; --muted:#8fa1b3; --gold:#f5c542; --cyan:#38cfe0;
+    --green:#4ade80; --red:#ff6b6b; --orange:#fb923c;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  header{
+    display:flex; align-items:baseline; gap:12px; padding:10px 16px;
+    background:var(--panel); border-bottom:1px solid var(--line); flex:0 0 auto;
+  }
+  header h1{font-size:17px; font-weight:600; letter-spacing:.3px;}
+  header span{font-size:13px; color:var(--muted);}
+  #main{flex:1; display:flex; min-height:0;}
+  #view{flex:1; position:relative; min-width:0; display:flex; flex-direction:column;}
+  #phiWrap{flex:1; position:relative; min-height:0;}
+  #phiWrap canvas{cursor:crosshair;}
+  canvas{display:block; position:absolute; inset:0;}
+  #tip{
+    position:absolute; pointer-events:none; display:none; z-index:5;
+    background:rgba(17,22,29,.96); border:1px solid var(--line); border-radius:8px;
+    padding:9px 12px; font-size:14px; max-width:300px; line-height:1.5;
+    box-shadow:0 4px 14px rgba(0,0,0,.5);
+  }
+  #tip .ln{white-space:nowrap; font-variant-numeric:tabular-nums;}
+  #hint{
+    position:absolute; left:12px; bottom:8px; font-size:13px; color:var(--muted);
+    background:rgba(11,15,20,.65); padding:4px 10px; border-radius:6px;
+    pointer-events:none; z-index:4;
+  }
+  #panel{
+    flex:0 0 348px; background:var(--panel); border-left:1px solid var(--line);
+    overflow-y:auto; padding:14px 16px 20px; font-size:14px;
+  }
+  #panel h2{
+    font-size:13px; text-transform:uppercase; letter-spacing:1.4px; color:var(--text);
+    margin:26px 0 10px; padding-bottom:6px; border-bottom:1px solid #3d4c5c;
+  }
+  #panel h2:first-child{margin-top:2px;}
+  .steps{display:flex; gap:5px; margin-bottom:9px;}
+  .step{
+    flex:1; text-align:center; padding:7px 2px 6px; border:1px solid var(--line);
+    border-radius:7px; cursor:pointer; background:var(--panel2); user-select:none;
+  }
+  .step .n{font-size:15px; font-weight:700; color:var(--muted);}
+  .step .t{font-size:10.5px; color:var(--muted); margin-top:1px; letter-spacing:.2px;}
+  .step.on{border-color:var(--gold); background:#1d2129;}
+  .step.on .n,.step.on .t{color:var(--gold);}
+  #caption{
+    background:var(--panel2); border-radius:8px; padding:9px 11px 9px 13px; line-height:1.5;
+    font-size:13.5px; min-height:64px; border-left:3px solid var(--gold);
+  }
+  #caption .chip{
+    display:inline-block; border:1px dashed var(--muted); border-radius:10px;
+    padding:0 8px; font-size:12px; color:var(--muted); cursor:help; margin-left:2px;
+  }
+  #caption .chip:hover{color:var(--gold); border-color:var(--gold);}
+  .row{display:flex; align-items:center; gap:8px; margin:7px 0;}
+  .row label{flex:0 0 auto;}
+  .row .val{flex:0 0 60px; text-align:right; font-variant-numeric:tabular-nums; color:var(--gold);}
+  input[type=range]{
+    flex:1; -webkit-appearance:none; height:4px; border-radius:2px; background:#2a3542; outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--gold); cursor:pointer; border:2px solid #0b0f14;
+  }
+  input[type=radio],input[type=checkbox]{accent-color:var(--gold); width:14px; height:14px; cursor:pointer;}
+  .radios{display:flex; gap:12px; flex-wrap:wrap; margin:6px 0;}
+  .radios label{display:flex; align-items:center; gap:5px; cursor:pointer;}
+  button{
+    background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:6px; padding:7px 11px; font-size:13.5px; cursor:pointer;
+  }
+  button:hover{border-color:var(--gold); color:var(--gold);}
+  button.primary{border-color:var(--green); color:var(--green); font-weight:600;}
+  button.primary:hover{background:#15251b;}
+  .btns{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0;}
+  #result{
+    background:var(--panel2); border-radius:8px; padding:9px 11px 9px 13px; margin:10px 0 0;
+    border-left:3px solid #8fa1b3;
+  }
+  #verdict{font-size:13.5px; line-height:1.6; font-variant-numeric:tabular-nums;}
+  #outcome{
+    font-size:13.5px; color:var(--green); line-height:1.45;
+    margin-top:7px; padding-top:7px; border-top:1px dashed var(--line);
+  }
+  #outcome:empty{display:none;}
+  .subA{color:#cfd6de;} .subB{color:var(--cyan);} .subR{color:var(--red);}
+  .need{color:var(--orange);} .have{color:var(--green);}
+  .dim{color:var(--muted); font-size:12.5px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Object Thrown Between Two Planets</h1>
+  <span>gravitational potential φ, minimum KE, and the field g</span>
+</header>
+
+<div id="main">
+  <div id="view">
+    <div id="phiWrap"><canvas id="phiCanvas"></canvas></div>
+    <div id="tip"></div>
+    <div id="hint">click the graph to inspect — the marker follows your mouse · click again to hide</div>
+  </div>
+
+  <div id="panel">
+    <h2>Learning steps</h2>
+    <div class="steps" id="steps"></div>
+    <div id="caption"></div>
+
+    <div id="launchSec" style="display:none">
+      <h2>Throw the object</h2>
+      <div class="radios" id="dirRadios">
+        <label><input type="radio" name="dir" value="AB" checked> From A</label>
+        <label><input type="radio" name="dir" value="BA"> From B</label>
+        <label><input type="radio" name="dir" value="both"> Compare</label>
+      </div>
+      <div class="row"><label>object mass m</label><input type="range" id="m" min="1" max="5" step="0.5" value="1"><div class="val" id="mv"></div></div>
+      <div class="row" id="keRow">
+        <label>Launch KE</label>
+        <input type="range" id="ke" min="0" max="100" step="0.1" value="35">
+        <div class="val" id="keVal"></div>
+      </div>
+      <div class="btns" id="launchBtns">
+        <button class="primary" id="launchBtn">▶ Launch</button>
+        <button id="minBtn">Set to min KE</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+      <div id="result">
+        <div id="verdict"></div>
+        <div id="outcome"></div>
+      </div>
+    </div>
+
+    <h2>Graph options</h2>
+    <div class="row"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="showG"> overlay g–x graph (gold)</label></div>
+    <div class="row" id="showPartsRow" style="display:none"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="showParts"> show φ<sub>A</sub>, φ<sub>B</sub> curves</label></div>
+
+    <h2>Planet settings</h2>
+    <div class="row"><label>M<sub>A</sub></label><input type="range" id="MA" min="1" max="20" step="0.5" value="10"><div class="val" id="MAv"></div></div>
+    <div class="row"><label>R<sub>A</sub></label><input type="range" id="RA" min="2" max="10" step="0.5" value="6"><div class="val" id="RAv"></div></div>
+    <div class="row"><label>M<sub>B</sub></label><input type="range" id="MB" min="1" max="20" step="0.5" value="2"><div class="val" id="MBv"></div></div>
+    <div class="row"><label>R<sub>B</sub></label><input type="range" id="RB" min="2" max="10" step="0.5" value="3"><div class="val" id="RBv"></div></div>
+    <div class="dim">arbitrary units, G = 1, separation fixed</div>
+  </div>
+</div>
+
+<script>
+
+"use strict";
+/* ---------- state ---------- */
+const D = 100;                       // separation between centres
+const S = {
+  step: 1,
+  MA: 10, MB: 2, RA: 6, RB: 3,
+  m: 1,                              // mass of the thrown object (kg)
+  dir: 'AB',
+  keFrac: 35,                        // slider 0..100; 50 = exactly min KE
+  showG: false,
+  showParts: false,                  // show phi_A / phi_B individually in steps 4-5
+  pin: null,                         // clicked inspection point {x}
+  flight: null
+};
+let raf = null;
+
+/* ---------- physics (per unit mass) ---------- */
+const phiA = x => -S.MA / x;
+const phiB = x => -S.MB / (D - x);
+const phi  = x => phiA(x) + phiB(x);
+const gx   = x => -S.MA/(x*x) + S.MB/((D-x)*(D-x));   // +x points from A to B
+const xPeak = () => D / (1 + Math.sqrt(S.MB / S.MA));
+const xSurfA = () => S.RA;            // X
+const xSurfB = () => D - S.RB;        // Z
+const gapPhi = dir => phi(xPeak()) - phi(dir === 'AB' ? xSurfA() : xSurfB());  // per kg
+const minKE  = dir => S.m * gapPhi(dir);                                       // joules
+const launchKE = () => S.keFrac / 50 * minKE(S.dir === 'both' ? 'AB' : S.dir); // joules
+const UNIT = 'J';
+
+const f3 = v => {
+  const a = Math.abs(v);
+  if(a < 1e-12) return '0';
+  return v.toPrecision(a >= 100 ? 4 : 3).replace(/\.?0+$/,'').replace(/\.$/,'');
+};
+
+/* ---------- canvases ---------- */
+const phiCv = document.getElementById('phiCanvas');
+const tip   = document.getElementById('tip');
+const hint  = document.getElementById('hint');
+let PW=0, PH=0;
+
+function fit(cv, wrap){
+  const r = wrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  cv.width  = Math.max(1, r.width * dpr);
+  cv.height = Math.max(1, r.height * dpr);
+  cv.getContext('2d').setTransform(dpr,0,0,dpr,0,0);
+  return [r.width, r.height];
+}
+function resize(){
+  [PW,PH] = fit(phiCv, document.getElementById('phiWrap'));
+  draw();
+}
+new ResizeObserver(resize).observe(document.getElementById('phiWrap'));
+
+const ML = 104, MR = 104, MT = 30, MB_ = 34;
+let yMin = -1, yMax = 0.1;
+function computeScale(){
+  yMin = Math.min(phi(xSurfA()), phi(xSurfB())) * 1.12;
+  yMax = -yMin * (S.showG ? 0.38 : 0.16);   // more headroom when g overlay is on
+  if(S.step >= 4 && S.dir !== 'both'){
+    const xs = S.dir==='AB' ? xSurfA() : xSurfB();
+    const E = phi(xs) + launchKE()/S.m;
+    if(E + Math.abs(yMin)*0.08 > yMax) yMax = E + Math.abs(yMin)*0.08;
+  }
+}
+const px = x => ML + (x / D) * (PW - ML - MR);
+const py = v => MT + (yMax - v) / (yMax - yMin) * (PH - MT - MB_);
+const invx = X => (X - ML) / (PW - ML - MR) * D;
+
+/* ---------- drawing helpers ---------- */
+const COL = {A:'#aab6c2', B:'#38cfe0', R:'#ff6b6b', E:'#4ade80', N:'#fb923c', g:'#f5c542'};
+
+function curve(ctx, fn, x0, x1, color, dash, width){
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = width || 2;
+  ctx.setLineDash(dash || []);
+  ctx.beginPath();
+  const N = 500;
+  for(let i=0;i<=N;i++){
+    const x = x0 + (x1-x0)*i/N;
+    const Y = py(fn(x));
+    if(i===0) ctx.moveTo(px(x), Y); else ctx.lineTo(px(x), Y);
+  }
+  ctx.stroke(); ctx.restore();
+}
+function dot(ctx, X, Y, r, color){
+  ctx.save(); ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(X, Y, r, 0, 7); ctx.fill(); ctx.restore();
+}
+function label(ctx, txt, X, Y, color, align, size, bold){
+  ctx.save(); ctx.fillStyle = color || '#dbe4ee';
+  ctx.font = (bold?'600 ':'') + (size||14)+'px "Segoe UI",sans-serif';
+  ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+  ctx.fillText(txt, X, Y); ctx.restore();
+}
+/* text with real subscripts: parts = [{t:'φ'},{t:'A',sub:true},...] */
+function rich(ctx, parts, X, Y, color, align, size, bold){
+  size = size || 14;
+  ctx.save();
+  const fnt = s => (bold?'600 ':'') + s + 'px "Segoe UI",sans-serif';
+  let wsum = 0;
+  for(const p of parts){ ctx.font = fnt(p.sub ? size*0.72 : size); wsum += ctx.measureText(p.t).width; }
+  let x = (align==='center' || !align) ? X - wsum/2 : (align==='right' ? X - wsum : X);
+  ctx.fillStyle = color || '#dbe4ee';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+  for(const p of parts){
+    ctx.font = fnt(p.sub ? size*0.72 : size);
+    ctx.fillText(p.t, x, Y + (p.sub ? size*0.30 : 0));
+    x += ctx.measureText(p.t).width;
+  }
+  ctx.restore();
+}
+const PHI = s => [{t:'φ'},{t:s,sub:true}];
+function vline(ctx, X, y1, y2, color, dash){
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash(dash||[4,4]);
+  ctx.beginPath(); ctx.moveTo(X, y1); ctx.lineTo(X, y2); ctx.stroke(); ctx.restore();
+}
+function hline(ctx, y, x1, x2, color, dash, width){
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width||1.4; ctx.setLineDash(dash||[7,5]);
+  ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke(); ctx.restore();
+}
+function varrow(ctx, X, y1, y2, color, width){   // vertical double-headed arrow
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width||2;
+  const s = y1 < y2 ? 1 : -1;
+  ctx.beginPath(); ctx.moveTo(X, y1+6*s); ctx.lineTo(X, y2-6*s); ctx.stroke();
+  for(const [y, d] of [[y1, s],[y2, -s]]){
+    ctx.beginPath(); ctx.moveTo(X, y);
+    ctx.lineTo(X-4.5, y + 8*d); ctx.lineTo(X+4.5, y + 8*d); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+function sarrow(ctx, X, y1, y2, color){          // thin single-headed arrow, head at y2
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.8;
+  const s = y2 > y1 ? 1 : -1;
+  ctx.beginPath(); ctx.moveTo(X, y1); ctx.lineTo(X, y2 - 7*s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(X, y2);
+  ctx.lineTo(X-4, y2 - 8*s); ctx.lineTo(X+4, y2 - 8*s); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+/* ---------- main draw ---------- */
+function draw(){ computeScale(); drawPhi(); }
+
+function drawPhi(){
+  const ctx = phiCv.getContext('2d');
+  ctx.clearRect(0,0,PW,PH);
+  if(PW < 40) return;
+  const X0 = xSurfA(), X1 = xSurfB(), xY = xPeak();
+  const y0 = py(0);
+  const s = S.step;
+
+  /* axes */
+  ctx.strokeStyle = '#3a4654'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(ML-36, y0); ctx.lineTo(PW-6, y0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ML, MT-14); ctx.lineTo(ML, PH-8); ctx.stroke();
+  label(ctx, 'r', PW-14, y0-12, '#8fa1b3');
+  ctx.save(); ctx.translate(17, MT+14); ctx.rotate(-Math.PI/2);
+  ctx.fillStyle = '#8fa1b3'; ctx.font = '14px "Segoe UI"'; ctx.textAlign='right';
+  ctx.fillText('φ  /  J kg⁻¹ (arb.)', 0, 0);
+  ctx.restore();
+
+  /* sparse y ticks */
+  ctx.fillStyle = '#5e6f80'; ctx.font = '12.5px "Segoe UI"'; ctx.textAlign = 'right';
+  const tstep = Math.abs(yMin) > 4 ? 1 : (Math.abs(yMin) > 1.6 ? 0.5 : 0.2);
+  for(let v = 0; v >= yMin; v -= tstep){
+    ctx.fillText(f3(v), ML-6, py(v)+3);
+    ctx.fillRect(ML-3, py(v), 3, 1);
+  }
+
+  /* planets: drawn to scale — surface sits exactly at X / Z */
+  for(const [c, xs, name] of [[0, X0, 'A'], [D, X1, 'B']]){
+    const cx = px(c);
+    const r = Math.max(6, Math.abs(px(xs) - cx));
+    ctx.save();
+    ctx.globalAlpha = .92;
+    ctx.fillStyle = '#2c3946'; ctx.strokeStyle = '#556677'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, y0, r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    label(ctx, name, cx, y0, '#dbe4ee', 'center', 15, true);
+  }
+  for(const xs of [X0, X1]){
+    ctx.save(); ctx.strokeStyle = '#556677'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(px(xs), y0-6); ctx.lineTo(px(xs), y0+6); ctx.stroke();
+    ctx.restore();
+  }
+
+  /* step-4 reference lines drawn behind curves */
+  const pY = phi(xY);
+  const needX = d => px(d==='AB' ? X0 : X1) - (d==='AB' ? 1 : -1)*46;  // orange arrow, outside the surface
+  if(s >= 4){
+    /* orange barrier line runs from the arrow to the peak only */
+    if(S.dir === 'both')     hline(ctx, py(pY), needX('AB'), needX('BA'), COL.N);
+    else if(S.dir === 'AB')  hline(ctx, py(pY), needX('AB'), px(xY), COL.N);
+    else                     hline(ctx, py(pY), px(xY), needX('BA'), COL.N);
+    if(S.dir !== 'both'){
+      const xs = S.dir==='AB' ? X0 : X1;
+      const E = phi(xs) + launchKE()/S.m;
+      const ex1 = S.dir==='AB' ? needX('AB') : px(X0)-6;
+      const ex2 = S.dir==='AB' ? px(X1)+6 : needX('BA');
+      hline(ctx, py(E), ex1, ex2, COL.E);                          // total energy (green)
+      const lx = S.dir==='AB' ? px(X1)-8 : px(X0)+8;
+      label(ctx, 'total energy', lx, py(E)-11, COL.E, S.dir==='AB'?'right':'left', 13);
+    }
+  }
+
+  /* curves: individual phi_A / phi_B hidden by default from step 4 (toggle in panel) */
+  const partsOn = s < 4 || S.showParts;
+  const showA = partsOn, showB = s >= 2 && partsOn, showR = s >= 3;
+  if(showA) curve(ctx, phiA, X0, X1, COL.A, (s>=3?[3,4]:[]), s===1?2.4:1.4);
+  if(showB) curve(ctx, phiB, X0, X1, COL.B, (s>=3?[3,4]:[]), s===2?2.4:1.4);
+  if(showR) curve(ctx, phi,  X0, X1, COL.R, [], 2.6);
+  if(S.showG) drawGOverlay(ctx, y0, X0, X1);
+
+  if(showA) rich(ctx, PHI('A'), px(X0+(X1-X0)*0.88), py(phiA(X0+(X1-X0)*0.88))-14, COL.A);
+  if(showB) rich(ctx, PHI('B'), px(X0+(X1-X0)*0.10), py(phiB(X0+(X1-X0)*0.10))-14, COL.B);
+  if(showR) rich(ctx, [...PHI('A'), {t:' + '}, ...PHI('B')],
+                 px(X0+(X1-X0)*0.40), py(phi(X0+(X1-X0)*0.40))+17, COL.R);
+
+  /* step-4: markers + need/have arrows */
+  if(s >= 4){
+    vline(ctx, px(xY), py(pY), y0, '#8fa1b3');
+    for(const [x, t] of [[X0,'X'],[xY,'Y'],[X1,'Z']]){
+      label(ctx, t, px(x), y0-15, '#dbe4ee', 'center', 15, true);
+      dot(ctx, px(x), y0, 2.5, '#8fa1b3');
+    }
+    dot(ctx, px(xY), py(pY), 4.5, COL.R);
+    /* annotation pointing at the peak */
+    {
+      const flip = px(xY) > PW*0.62 ? -1 : 1;
+      const tx = px(xY) + flip*58, ty = py(pY) - 32;
+      const ax = px(xY) + flip*5, ay = py(pY) - 5;
+      ctx.save(); ctx.strokeStyle = '#dbe4ee'; ctx.fillStyle = '#dbe4ee'; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(tx - flip*8, ty + 5); ctx.lineTo(ax, ay); ctx.stroke();
+      const dx2 = (tx - flip*8) - ax, dy2 = (ty + 5) - ay, L = Math.hypot(dx2, dy2) || 1;
+      const ux = dx2/L, uy = dy2/L;
+      ctx.beginPath(); ctx.moveTo(ax, ay);
+      ctx.lineTo(ax + ux*9 - uy*3.5, ay + uy*9 + ux*3.5);
+      ctx.lineTo(ax + ux*9 + uy*3.5, ay + uy*9 - ux*3.5);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      label(ctx, 'max resultant φ — and g = 0', tx, ty, '#dbe4ee', flip>0?'left':'right', 13);
+    }
+
+    const dirs = S.dir === 'both' ? ['AB','BA'] : [S.dir];
+    for(const d of dirs){
+      const xs = d==='AB' ? X0 : X1;
+      const side = d==='AB' ? 1 : -1;
+      const yS = py(phi(xs));
+      const nX = needX(d);
+      /* dotted reference from the end of the resultant curve out to the arrows */
+      hline(ctx, yS, Math.min(nX, px(xs)), Math.max(nX, px(xs)), '#66788a', [3,3], 1);
+      /* orange REQUIRED arrow, fully outside the curve; label outward */
+      varrow(ctx, nX, yS, py(pY), COL.N);
+      const midN = (yS+py(pY))/2;
+      label(ctx, 'KE required = '+f3(minKE(d))+' J', nX - side*9, midN,
+            COL.N, side>0?'right':'left', 13.5, true);
+      /* green GIVEN arrow, between the orange arrow and the surface */
+      if(S.dir !== 'both'){
+        const E = phi(xs) + launchKE()/S.m;
+        varrow(ctx, px(xs) - side*20, yS, py(E), COL.E);
+        let midG = (yS+py(E))/2;
+        if(Math.abs(midG - midN) < 17) midG += 20;
+        label(ctx, 'KE given = '+f3(launchKE())+' J', nX - side*9, midG,
+              COL.E, side>0?'right':'left', 13.5, true);
+      }
+    }
+
+    /* turning point (only if E below barrier) */
+    if(S.dir !== 'both'){
+      const xs = S.dir==='AB' ? X0 : X1;
+      const E = phi(xs) + launchKE()/S.m;
+      if(E < pY - 1e-12){
+        const xt = findTurn(xs, S.dir==='AB'?1:-1, E);
+        if(xt !== null){
+          dot(ctx, px(xt), py(phi(xt)), 4.5, COL.E);
+          label(ctx, 'turns back here', px(xt), py(phi(xt))-16, COL.E, 'center', 13);
+        }
+      }
+    }
+
+    /* flight: just the object on the axis + its point on the curve */
+    if(S.flight){
+      const F = S.flight;
+      const Xo = px(F.x);
+      dot(ctx, Xo, y0-7, 6.5, '#ffffff');                       // real object on the axis
+      dot(ctx, Xo, py(phi(F.x)), 4, '#ffffff');                 // its φ on the curve
+      vline(ctx, Xo, y0-7, py(phi(F.x)), '#66788a', [2,3]);
+      if(Math.abs(F.x - xY) < (X1-X0)*0.02 && !F.done){
+        label(ctx, 'g = 0 here — but it keeps moving!', px(xY), py(pY)-28, COL.g, 'center', 14, true);
+      }
+    }
+  }
+
+  drawPin(ctx, y0, X0, X1);
+}
+
+function findTurn(x0, dir, Espec){
+  const X0 = xSurfA(), X1 = xSurfB();
+  const N = 800;
+  let prev = x0;
+  for(let i=1;i<=N;i++){
+    const x = x0 + dir * i * (X1-X0)/N;
+    if(x <= X0 || x >= X1) return null;
+    if(phi(x) >= Espec){
+      let a = prev, b = x;
+      for(let k=0;k<40;k++){ const mid=(a+b)/2; if(phi(mid) >= Espec) b = mid; else a = mid; }
+      return (a+b)/2;
+    }
+    prev = x;
+  }
+  return null;
+}
+
+/* ---------- inspector (click to show, follows the mouse, click again to hide) ---------- */
+function drawPin(ctx, y0, X0, X1){
+  const s = S.step;
+  if(s >= 4){ tip.style.display = 'none'; hint.style.display = 'none'; return; }
+  if(!S.pin){ tip.style.display = 'none'; hint.style.display = 'block'; return; }
+  hint.style.display = 'none';
+  const hx = Math.min(Math.max(S.pin.x, X0+0.3), X1-0.3);
+  const Xp = px(hx);
+
+  if(s === 1){
+    const v = phiA(hx);
+    vline(ctx, Xp, y0, py(v), '#66788a');
+    dot(ctx, Xp, py(v), 5, COL.A);
+    showTip(Xp, py(v),
+      `<div class="ln subA">r = ${f3(hx)} from A</div>
+       <div class="ln subA">φ<sub>A</sub> = −GM<sub>A</sub>/r = <b>${f3(v)}</b></div>
+       <div class="dim">deeper (more negative) closer to A</div>`);
+  }
+  else if(s === 2){
+    const d = D - hx, v = phiB(hx);
+    ctx.save(); ctx.strokeStyle = COL.B; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(Xp, y0+18); ctx.lineTo(px(D), y0+18); ctx.stroke();
+    for(const xx of [Xp, px(D)]){
+      ctx.beginPath(); ctx.moveTo(xx, y0+13); ctx.lineTo(xx, y0+23); ctx.stroke();
+    }
+    ctx.restore();
+    label(ctx, 'd = '+f3(d), (Xp+px(D))/2, y0+33, COL.B, 'center', 13.5, true);
+    vline(ctx, Xp, y0, py(v), '#2b6d78');
+    dot(ctx, Xp, py(v), 5, COL.B);
+    showTip(Xp, py(v),
+      `<div class="ln subB">distance from <b>B</b>: d = ${f3(d)}</div>
+       <div class="ln subB">φ<sub>B</sub> = −GM<sub>B</sub>/d = <b>${f3(v)}</b></div>
+       <div class="dim">same law as planet A — but d shrinks going right, so the well deepens toward B</div>`);
+  }
+  else{
+    /* scalar sum: component arrows + ONE total arrow landing on the red curve */
+    const a = phiA(hx), b = phiB(hx), r = a + b;
+    const gap = 20;
+    vline(ctx, Xp, MT, PH-MB_, '#3a4654', [3,5]);
+    /* component arrows, side by side, hanging from the axis */
+    sarrow(ctx, Xp - gap*2, y0, py(a), COL.A);
+    sarrow(ctx, Xp - gap,   y0, py(b), COL.B);
+    /* single total arrow at the pinned x — its tip lands exactly on the red curve */
+    sarrow(ctx, Xp, y0, py(r), COL.R);
+    label(ctx, '+', Xp - gap*1.5, y0+13, '#8fa1b3', 'center', 16, true);
+    label(ctx, '=', Xp - gap/2,   y0+13, '#8fa1b3', 'center', 16, true);
+    dot(ctx, Xp, py(r), 5.5, COL.R);
+    /* markers on the source curves + dotted links back to each component arrow */
+    dot(ctx, Xp, py(a), 3.5, COL.A);
+    dot(ctx, Xp, py(b), 3.5, COL.B);
+    ctx.save(); ctx.lineWidth = 1; ctx.setLineDash([2,3]);
+    ctx.strokeStyle = COL.A;
+    ctx.beginPath(); ctx.moveTo(Xp - gap*2, py(a)); ctx.lineTo(Xp, py(a)); ctx.stroke();
+    ctx.strokeStyle = COL.B;
+    ctx.beginPath(); ctx.moveTo(Xp - gap, py(b)); ctx.lineTo(Xp, py(b)); ctx.stroke();
+    ctx.restore();
+    showTip(Xp, py(r),
+      `<div class="ln"><span class="subA">φ<sub>A</sub> = ${f3(a)}</span></div>
+       <div class="ln"><span class="subB">φ<sub>B</sub> = ${f3(b)}</span>&nbsp;&nbsp;<span class="dim">(both negative)</span></div>
+       <div class="ln"><span class="subR"><b>sum = ${f3(r)}</b></span></div>
+       <div class="dim">the red arrow is the two added together — it lands on the red curve</div>`);
+  }
+}
+
+function showTip(X, Y, html){
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  const vw = document.getElementById('view').getBoundingClientRect();
+  let L = X + 20, T = Y - 12;
+  tip.style.left = '0px'; tip.style.top = '0px';
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  if(L + tw > vw.width - 8) L = X - tw - 20;
+  if(T + th > vw.height - 8) T = vw.height - th - 8;
+  if(T < 4) T = 4;
+  tip.style.left = L+'px'; tip.style.top = T+'px';
+}
+
+/* ---------- g overlay on the φ graph (own vertical scale, g = 0 on the r-axis) ---------- */
+function drawGOverlay(ctx, y0, X0, X1){
+  const xY = xPeak();
+  const gLim = Math.max(Math.abs(gx(X0)), Math.abs(gx(X1)));
+  if(gLim < 1e-12) return;
+  /* amplitude chosen so the curve fits: positive lobe within the headroom above
+     the axis, negative lobe within ~70% of the space below */
+  const ampUp = y0 - MT - 8;
+  const ampDn = (PH - MB_ - y0) * 0.7;
+  const posMax = Math.max(1e-12, Math.max(gx(X1), 0)) / gLim;
+  const negMax = Math.max(1e-12, Math.max(-gx(X0), 0)) / gLim;
+  const amp = Math.min(posMax > 1e-9 ? ampUp/posMax : 1e9,
+                       negMax > 1e-9 ? ampDn/negMax : 1e9);
+  const gy = v => y0 - (v/gLim) * amp;
+
+  ctx.save(); ctx.strokeStyle = COL.g; ctx.lineWidth = 2; ctx.globalAlpha = .95;
+  ctx.beginPath();
+  const N = 500;
+  for(let i=0;i<=N;i++){
+    const x = X0 + (X1-X0)*i/N;
+    const Y = gy(gx(x));
+    if(i===0) ctx.moveTo(px(x), Y); else ctx.lineTo(px(x), Y);
+  }
+  ctx.stroke(); ctx.restore();
+
+  label(ctx, 'g', px(X0 + (X1-X0)*0.045), gy(gx(X0 + (X1-X0)*0.045)) - 14, COL.g, 'center', 14, true);
+  dot(ctx, px(xY), y0, 4, COL.g);
+  label(ctx, 'g = 0', px(xY)+9, y0+14, COL.g, 'left', 13);
+}
+
+/* ---------- steps ---------- */
+const STEPS = [
+  {t:'A alone', cap:`One planet: <span class="subA">φ<sub>A</sub> = −GM<sub>A</sub>/r</span> — zero far away, deeper closer in: a potential <i>well</i>. Click the graph to inspect a point.
+      <span class="chip" id="whyNeg">why negative?</span>`},
+  {t:'add B',   cap:`Planet <span class="subB">B</span> obeys the <b>same law</b> — but its distance d is measured <b>from B</b>. Click along the axis: going right, d shrinks, so <span class="subB">φ<sub>B</sub></span> deepens toward B. Same curve, mirrored.`},
+  {t:'sum',     cap:`Resultant <span class="subR">φ = φ<sub>A</sub> + φ<sub>B</sub></span>: at each r, simply <b>add the two values</b> (φ is a scalar). Click the graph — the red arrow is the total of the two.`},
+  {t:'min KE',  cap:`<span class="have"><b>Green</b></span> = KE given. <span class="need"><b>Orange</b></span> = KE required to reach the top of the barrier at Y — beyond it, the other planet pulls the object in. A heavier object needs more KE, but the same launch <i>speed</i>.`},
+  {t:'g–x',     cap:`<span style="color:#f5c542">g = −dφ/dx</span> (gold curve, its own scale): the field is the <b>negative slope</b> of φ. Steep curve → strong g. At the peak Y the slope is zero → <b>g = 0</b>… but an object passing Y still has velocity, so it keeps moving.`}
+];
+const stepsDiv = document.getElementById('steps');
+STEPS.forEach((st,i)=>{
+  const d = document.createElement('div');
+  d.className = 'step'; d.innerHTML = `<div class="n">${i+1}</div><div class="t">${st.t}</div>`;
+  d.onclick = ()=> setStep(i+1);
+  stepsDiv.appendChild(d);
+});
+function setStep(n){
+  S.step = n;
+  S.flight = null; S.pin = null; stopAnim();
+  document.querySelectorAll('.step').forEach((el,i)=> el.classList.toggle('on', i+1===n));
+  document.getElementById('caption').innerHTML = STEPS[n-1].cap;
+  document.getElementById('launchSec').style.display = n>=4 ? 'block' : 'none';
+  document.getElementById('showPartsRow').style.display = n>=4 ? 'flex' : 'none';
+  if(n===5){ S.showG = true; document.getElementById('showG').checked = true; }
+  const w = document.getElementById('whyNeg');
+  if(w){
+    w.onmouseenter = ()=>{ showTip(60, 60,
+      `<div>φ is defined as <b>0 at infinity</b>.</div>
+       <div class="dim" style="margin-top:4px">Gravity pulls inward, so moving <i>away</i> from the planet needs positive work — you climb <i>up</i> toward zero. Everywhere inside the well, φ &lt; 0.</div>`); };
+    w.onmouseleave = ()=>{ if(!S.pin) tip.style.display='none'; };
+  }
+  updateReadouts(); resize();
+}
+
+/* ---------- controls ---------- */
+function bindRange(id, key){
+  const el = document.getElementById(id), val = document.getElementById(id+'v');
+  const upd = ()=>{
+    S[key] = parseFloat(el.value);
+    if(val) val.textContent = f3(S[key]);
+    S.flight = null; stopAnim();
+    updateReadouts(); draw();
+  };
+  el.addEventListener('input', upd); upd();
+}
+bindRange('MA','MA'); bindRange('MB','MB'); bindRange('RA','RA'); bindRange('RB','RB');
+bindRange('m','m');
+
+document.querySelectorAll('input[name=dir]').forEach(r=>{
+  r.addEventListener('change', e=>{
+    S.dir = e.target.value;
+    S.flight = null; stopAnim(); updateReadouts(); draw();
+  });
+});
+document.getElementById('showG').addEventListener('change', e=>{
+  S.showG = e.target.checked;
+  draw();
+});
+document.getElementById('showParts').addEventListener('change', e=>{
+  S.showParts = e.target.checked;
+  draw();
+});
+const keSlider = document.getElementById('ke');
+keSlider.addEventListener('input', ()=>{
+  S.keFrac = parseFloat(keSlider.value);
+  S.flight = null; stopAnim(); updateReadouts(); draw();
+});
+
+function updateReadouts(){
+  document.getElementById('keVal').textContent = f3(launchKE());
+  const box = document.getElementById('verdict');
+  if(S.dir === 'both'){
+    box.innerHTML =
+      `<span class="need">KE required from A: m·Δφ = ${f3(minKE('AB'))} ${UNIT}</span><br>
+       <span class="need">KE required from B: m·Δφ = ${f3(minKE('BA'))} ${UNIT}</span><br>
+       <span class="dim">${minKE('AB') > minKE('BA') ? 'escaping the heavier planet costs more'
+         : minKE('AB') < minKE('BA') ? 'escaping B costs more here' : 'equal here'}</span><br>
+       <span class="dim">KE required scales with m — min <i>speed</i> √(2Δφ) does not</span>`;
+    document.getElementById('keRow').style.display = 'none';
+    document.getElementById('launchBtns').style.display = 'none';
+  }else{
+    const sub = S.dir==='AB' ? 'X' : 'Z';
+    const gp = gapPhi(S.dir), need = minKE(S.dir), have = launchKE();
+    let v;
+    if(have < need*0.999)      v = '<span class="need">✗ not enough — turns back before Y</span>';
+    else if(have <= need*1.004) v = '<span style="color:#f5c542">≈ exactly enough — just reaches Y</span>';
+    else                       v = '<span class="have">✓ clears Y → reaches the other planet</span>';
+    box.innerHTML =
+      `<span class="need">KE required = m(φ<sub>Y</sub> − φ<sub>${sub}</sub>) = ${f3(S.m)} × ${f3(gp)} = ${f3(need)} ${UNIT}</span><br>
+       <span class="have">KE given = ${f3(have)} ${UNIT}</span><br>${v}<br>
+       <span class="dim">min speed = √(2(φ<sub>Y</sub> − φ<sub>${sub}</sub>)) = ${f3(Math.sqrt(2*gp))} — the same for <i>any</i> mass m</span>`;
+    document.getElementById('keRow').style.display = 'flex';
+    document.getElementById('launchBtns').style.display = 'flex';
+  }
+  document.getElementById('outcome').textContent = S.flight ? (S.flight.msg||'') : '';
+  document.getElementById('mv').textContent = f3(S.m)+' kg';
+  document.getElementById('MAv').textContent = f3(S.MA);
+  document.getElementById('MBv').textContent = f3(S.MB);
+  document.getElementById('RAv').textContent = f3(S.RA);
+  document.getElementById('RBv').textContent = f3(S.RB);
+}
+
+/* ---------- launch animation ---------- */
+function stopAnim(){ if(raf){ cancelAnimationFrame(raf); raf = null; } }
+
+document.getElementById('launchBtn').onclick = ()=>{
+  if(S.dir === 'both') return;
+  stopAnim();
+  const from = S.dir;
+  const xs = from==='AB' ? xSurfA() : xSurfB();
+  const Espec = phi(xs) + launchKE()/S.m;   // specific energy: same speed whatever the mass
+  const dirSign = from==='AB' ? 1 : -1;
+  const pk = phi(xPeak());
+  const crosses = Espec >= pk - 1e-12;
+  const atMin = crosses && (Espec - pk) < Math.abs(pk)*2e-4;
+  const xt = crosses ? null : findTurn(xs, dirSign, Espec);
+  S.flight = {x: xs, dir: dirSign, Espec, from, crosses, atMin, xt, turned:false, done:false, msg:''};
+  tick();
+};
+document.getElementById('minBtn').onclick = ()=>{
+  keSlider.value = 50;
+  keSlider.dispatchEvent(new Event('input'));
+};
+document.getElementById('resetBtn').onclick = ()=>{
+  stopAnim(); S.flight = null; updateReadouts(); draw();
+};
+
+function tick(){
+  /* motion driven by energy conservation: v(x) = sqrt(2(E − φ(x))) — exact, no drift */
+  const F = S.flight;
+  if(!F || F.done) return;
+  const X0 = xSurfA(), X1 = xSurfB(), xY = xPeak();
+  const sub = 7, dt = 0.065;
+  for(let i=0;i<sub && !F.done;i++){
+    const v = Math.sqrt(Math.max(0, 2*(F.Espec - phi(F.x))));
+    if(F.atMin && !F.turned && Math.abs(F.x - xY) < 1.5){
+      F.x = xY; F.done = true;
+      F.msg = '≈ With exactly the minimum KE it just barely reaches Y — arriving with (almost) zero speed. The tiniest nudge more and ' +
+              (F.from==='AB' ? 'B' : 'A') + ' pulls it in.';
+      break;
+    }
+    if(!F.crosses && !F.turned){
+      const towardBarrier = F.from==='AB' ? F.dir > 0 : F.dir < 0;
+      if(towardBarrier && F.xt !== null &&
+         (F.dir > 0 ? (F.xt - F.x < 0.05 || F.x + v*dt >= F.xt)
+                    : (F.x - F.xt < 0.05 || F.x - v*dt <= F.xt))){
+        F.x = F.xt; F.dir = -F.dir; F.turned = true;
+        continue;
+      }
+    }
+    /* kinematic step: v·dt + ½·a·dt² so motion restarts from rest at a turning point */
+    F.x += F.dir * v * dt + 0.5 * gx(F.x) * dt * dt;
+    if(F.x <= X0){
+      F.x = X0; F.done = true;
+      F.msg = F.from==='AB'
+        ? '✗ Falls back onto A — the green line never reached the orange barrier level.'
+        : '✓ Arrives at A with KE = ' + f3(S.m*(F.Espec - phi(X0))) + ' ' + UNIT + ' — it speeds up all the way down from Y.';
+    }
+    if(F.x >= X1){
+      F.x = X1; F.done = true;
+      F.msg = F.from==='BA'
+        ? '✗ Falls back onto B — not enough KE to reach Y.'
+        : '✓ Arrives at B with KE = ' + f3(S.m*(F.Espec - phi(X1))) + ' ' + UNIT + ' — past Y, planet B does the pulling.';
+    }
+  }
+  updateReadouts(); draw();
+  if(!F.done) raf = requestAnimationFrame(tick);
+}
+
+/* ---------- click to show, marker follows the mouse, click again to hide ---------- */
+document.getElementById('phiWrap').addEventListener('click', e=>{
+  if(S.step >= 4){ S.pin = null; draw(); return; }
+  if(S.pin){ S.pin = null; draw(); return; }
+  const r = phiCv.getBoundingClientRect();
+  const x = invx(e.clientX - r.left);
+  if(x >= xSurfA() && x <= xSurfB()) S.pin = {x};
+  draw();
+});
+document.getElementById('phiWrap').addEventListener('mousemove', e=>{
+  if(!S.pin) return;
+  const r = phiCv.getBoundingClientRect();
+  S.pin.x = invx(e.clientX - r.left);
+  draw();
+});
+
+/* ---------- init ---------- */
+setStep(1);
+resize();
+</script>
+</body>
+</html>
