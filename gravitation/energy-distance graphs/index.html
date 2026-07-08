@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Same Graphs, Different Physics — Gravitational Energy (H2 Physics)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<style>
+  :root{
+    --bg:#E9EDF2; --panel:#FFFFFF; --ink:#17212B; --muted:#5A6B7B; --line:#D4DCE4;
+    --space:#0A1120; --space-line:#233049;
+    --ke:#D8433B; --gpe:#2B63C9; --te:#178A4C;
+    --ctrl:#B96A00; --ctrl-soft:#FDF3E3;
+    --ok-bg:#E7F5EC; --ok-bd:#178A4C; --bad-bg:#FBEAE9; --bad-bd:#D8433B;
+    --radius:14px;
+    --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --disp:"Space Grotesk", system-ui, sans-serif;
+    --body:system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--body); font-size:15px; line-height:1.5;}
+  .wrap{max-width:1280px; margin:0 auto; padding:22px 18px 60px;}
+
+  header.masthead{margin-bottom:18px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);}
+  h1{font-family:var(--disp); font-weight:700; font-size:clamp(24px,3.4vw,36px); margin:.15em 0 .1em; letter-spacing:-.01em;}
+  h1 .a{color:var(--ke)} h1 .b{color:var(--gpe)}
+  .thesis{color:var(--muted); max-width:70ch; margin:0;}
+
+  .panels{display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:stretch;}
+  @media (max-width:980px){ .panels{grid-template-columns:1fr;} }
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column; position:relative;}
+  .card h2{font-family:var(--disp); font-size:17px; font-weight:700; margin:0; padding:12px 16px 2px; display:flex; gap:10px; align-items:baseline;}
+  .card h2 .tag{font-family:var(--mono); font-size:11px; font-weight:500; letter-spacing:.08em; padding:2px 8px; border-radius:99px; color:#fff;}
+  .card.pA h2 .tag{background:var(--ke)} .card.pB h2 .tag{background:var(--gpe)}
+  .card .sub{padding:0 16px 8px; color:var(--muted); font-size:13px;}
+
+  .controls{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; padding:8px 16px 12px;}
+  .controls label{font-size:13px; color:var(--muted); display:flex; flex-direction:column; gap:4px; flex:1 1 220px; min-width:200px;}
+  .controls .val{font-family:var(--mono); font-size:12.5px; color:var(--ink);}
+  input[type=range]{width:100%; accent-color:var(--ctrl); height:22px;}
+  button{font-family:var(--disp); font-weight:500; font-size:13.5px; border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:9px; padding:7px 14px; cursor:pointer;}
+  button:hover{border-color:var(--ctrl); color:var(--ctrl);}
+  button:focus-visible, input:focus-visible{outline:2px solid var(--ctrl); outline-offset:2px;}
+  button.primary{background:var(--ctrl); border-color:var(--ctrl); color:#fff;}
+  button.primary:hover{filter:brightness(1.08); color:#fff;}
+
+  canvas{display:block; width:100%;}
+  canvas.viewport{height:210px; background:var(--space);}
+  canvas.graph{height:320px; background:#fff; cursor:crosshair; touch-action:pan-y;}
+
+  .tooltip{position:absolute; z-index:6; max-width:290px; background:#0F1B2B; color:#EAF1F8;
+    border-radius:10px; padding:10px 13px; font-size:12.5px; line-height:1.5;
+    box-shadow:0 8px 22px rgba(10,17,32,.35); pointer-events:none; display:none;
+    border-left:4px solid #fff;}
+  .tooltip .tt-title{font-family:var(--disp); font-weight:700; font-size:13px; margin-bottom:2px;}
+  .tooltip .tt-eq{font-family:var(--mono); font-size:12px; margin:4px 0; color:#FFD37E;}
+  .tooltip .tt-val{font-family:var(--mono); font-size:11.5px; color:#9FD3A8; margin-top:6px;}
+  .tooltip .tt-pin{font-size:10.5px; color:#8FA3B8; margin-top:5px; font-family:var(--mono);}
+  .tooltip b{color:#FFFFFF; font-size:13px;}
+
+  .readout{font-family:var(--mono); font-size:12.5px; padding:9px 16px; border-top:1px solid var(--line); background:#F7F9FB; color:var(--ink); display:flex; flex-wrap:wrap; gap:4px 18px;}
+  .readout b{font-weight:500;}
+  .readout .ke{color:var(--ke)} .readout .gpe{color:var(--gpe)} .readout .te{color:var(--te)}
+  .caption{padding:9px 16px 13px; font-size:13px; color:var(--muted); border-top:1px dashed var(--line);}
+  .caption strong{color:var(--ink); font-weight:600;}
+
+  .comparebar{margin:16px 0; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px 16px; display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center;}
+  .switch{display:flex; align-items:center; gap:9px; cursor:pointer; font-weight:600; font-family:var(--disp); font-size:14px;}
+  .switch input{width:38px; height:22px; accent-color:var(--ctrl); cursor:pointer;}
+  #compareText{font-family:var(--mono); font-size:12.5px; color:var(--ink); background:var(--ctrl-soft); border:1px solid #EAD3AC; border-radius:8px; padding:6px 10px; display:none;}
+  #compareText.on{display:block;}
+
+  section.block{margin-top:26px;}
+  section.block > h2{font-family:var(--disp); font-size:20px; margin:0 0 4px;}
+  section.block > p.lead{color:var(--muted); margin:0 0 12px; max-width:75ch;}
+
+  .cp{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:10px; overflow:hidden;}
+  .cp > button.head{width:100%; text-align:left; border:0; background:none; padding:13px 16px; display:flex; gap:12px; align-items:center; border-radius:0;}
+  .cp > button.head:hover{color:var(--ink); background:#F7F9FB;}
+  .cp .num{font-family:var(--mono); font-size:12px; color:#fff; background:var(--ink); border-radius:99px; min-width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center;}
+  .cp .kind{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ctrl); background:var(--ctrl-soft); padding:2px 8px; border-radius:99px;}
+  .cp .qtitle{font-weight:600; font-family:var(--disp); flex:1;}
+  .cp .body{display:none; padding:2px 16px 15px;}
+  .cp.open .body{display:block;}
+  .cp .opts{display:flex; flex-direction:column; gap:8px; margin-top:8px;}
+  .cp .opts button{text-align:left; padding:9px 13px;}
+  .cp .opts button.correct{background:var(--ok-bg); border-color:var(--ok-bd); color:#0E5C33;}
+  .cp .opts button.wrong{background:var(--bad-bg); border-color:var(--bad-bd); color:#8F2620;}
+  .cp .expl{display:none; margin-top:10px; padding:11px 13px; border-radius:9px; font-size:13.5px; background:var(--ok-bg); border:1px solid #BFE3CD;}
+  .cp .expl.show{display:block;}
+  .cp .actions{display:flex; gap:9px; margin-top:10px; flex-wrap:wrap;}
+
+  details.theory{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-top:26px;}
+  details.theory > summary{cursor:pointer; padding:14px 16px; font-family:var(--disp); font-weight:700; font-size:17px; list-style:none;}
+  details.theory > summary::-webkit-details-marker{display:none;}
+  details.theory > summary::after{content:"+"; float:right; font-family:var(--mono); color:var(--muted);}
+  details.theory[open] > summary::after{content:"–";}
+  .theory .cols{display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:0 16px 18px;}
+  @media (max-width:820px){ .theory .cols{grid-template-columns:1fr;} }
+  .theory .col{border-top:3px solid var(--line); padding-top:10px;}
+  .theory .col.a{border-color:var(--ke);} .theory .col.b{border-color:var(--gpe);}
+  .theory h3{font-family:var(--disp); font-size:15px; margin:0 0 6px;}
+  .eq{margin:7px 0; font-size:15px; overflow-x:auto; padding:2px 0;}
+  .theory p.note{font-size:13px; color:var(--muted); margin:8px 0 0;}
+
+  footer.assump{margin-top:22px; font-size:12.5px; color:var(--muted); font-family:var(--mono); line-height:1.7;}
+
+  @media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="eyebrow">H2 Physics · 8 Gravitation · Energy–distance graphs</div>
+  <h1>Same-shaped graphs, <span class="a">different</span> <span class="b">physics</span></h1>
+  <p class="thesis">Panel A shows <strong>one object</strong> thrown radially outward — its point <em>travels along</em> the curves as time passes, while TE stays fixed. Panel B shows a <strong>family of circular orbits</strong> — each r is a different orbit, and nothing moves along the curves unless you <em>choose</em> a new orbit.</p>
+</header>
+
+<div class="panels">
+
+  <!-- ======================= PANEL A : LINEAR ======================= -->
+  <div class="card pA">
+    <h2><span class="tag">A</span> Radial projection — one object, moving in time</h2>
+    <div class="sub">Launched from the surface with speed v₀. TE = KE + GPE is set at launch and never changes.</div>
+    <div class="controls">
+      <label>Launch speed v₀
+        <input type="range" id="fSlider" min="0.40" max="1.20" step="0.01" value="0.75" aria-label="Launch speed as fraction of escape velocity">
+        <span class="val" id="fVal"></span>
+      </label>
+      <button id="playA" class="primary" aria-label="Play or pause panel A">Pause</button>
+      <button id="resetA">Relaunch</button>
+    </div>
+    <canvas id="vpA" class="viewport"></canvas>
+    <canvas id="grA" class="graph"></canvas>
+    <div class="readout" id="roA"></div>
+    <div class="caption"><strong>Watch the dots slide.</strong> KE and GPE change continuously as the object moves — rising: KE → GPE; falling back: GPE → KE — while TE stays constant the whole time. <em>Hover or tap any curve to see what it means.</em></div>
+  </div>
+
+  <!-- ======================= PANEL B : SATELLITE ======================= -->
+  <div class="card pB">
+    <h2><span class="tag">B</span> Circular orbits — a family of orbits, one per r</h2>
+    <div class="sub">Gravity provides the centripetal force: GMm/r² = mv²/r, so KE = GMm/2r is fixed by the orbit.</div>
+    <div class="controls">
+      <label>Orbital radius r
+        <input type="range" id="rSlider" min="1.5" max="9" step="0.05" value="3" aria-label="Orbital radius in planet radii">
+        <span class="val" id="rVal"></span>
+      </label>
+      <button id="playB" class="primary" aria-label="Play or pause panel B">Pause</button>
+    </div>
+    <canvas id="vpB" class="viewport"></canvas>
+    <canvas id="grB" class="graph"></canvas>
+    <div class="readout" id="roB"></div>
+    <div class="caption"><strong>The markers don’t move with time.</strong> While orbiting at one r, KE, GPE and TE are <em>all</em> constant. Dragging the slider means choosing a totally different setup — a different orbit — not time passing. Higher orbit ⇒ TE increases, but KE <em>decreases</em>. <em>Hover or tap any curve to see what it means.</em></div>
+  </div>
+</div>
+
+<div class="comparebar">
+  <label class="switch"><input type="checkbox" id="cmpToggle"> Compare at the satellite’s r</label>
+  <span id="compareText"></span>
+</div>
+
+<section class="block" id="checkpoints">
+  <h2>Checkpoints</h2>
+  <p class="lead">Work through these in order — each one targets a common point of confusion. Predict first, then use the panels above to check.</p>
+  <div id="cpList"></div>
+</section>
+
+<details class="theory">
+  <summary>Theory summary (H2 notation)</summary>
+  <div class="cols">
+    <div class="col a">
+      <h3>A — Object projected radially from the surface</h3>
+      <div class="eq" data-tex="\text{TE} = \tfrac{1}{2}mv_0^2 - \dfrac{GMm}{R} = \text{constant}"></div>
+      <div class="eq" data-tex="\text{GPE} = -\dfrac{GMm}{r}, \qquad \text{KE}(r) = \text{TE} + \dfrac{GMm}{r}"></div>
+      <div class="eq" data-tex="r_{max}:\ \text{KE}=0 \;\Rightarrow\; r_{max} = \dfrac{R}{\,1-(v_0/v_{esc})^2\,} \quad (v_0 < v_{esc})"></div>
+      <div class="eq" data-tex="v_{esc} = \sqrt{\dfrac{2GM}{R}}"></div>
+      <p class="note">KE and GPE are mirror images <em>about the TE line</em>. TE &lt; 0 ⇒ bound (r_max exists); TE ≥ 0 ⇒ escapes.</p>
+    </div>
+    <div class="col b">
+      <h3>B — Satellite in a circular orbit of radius r</h3>
+      <div class="eq" data-tex="\dfrac{GMm}{r^2} = \dfrac{mv^2}{r} \;\Rightarrow\; \text{KE} = \dfrac{GMm}{2r}"></div>
+      <div class="eq" data-tex="\text{GPE} = -\dfrac{GMm}{r}, \qquad \text{TE} = \text{KE}+\text{GPE} = -\dfrac{GMm}{2r}"></div>
+      <p class="note">TE = ½ GPE, KE = ½|GPE|. KE and TE are mirror images <em>about the x-axis</em>. Every point on these curves is a <em>different</em> orbit; a single satellite sits at one r. TE &lt; 0 always ⇒ every circular orbit is bound.</p>
+    </div>
+  </div>
+</details>
+
+<footer class="assump">
+  Earth values: GM = 3.986 × 10¹⁴ m³ s⁻², R = 6.37 × 10⁶ m · object/satellite mass m = 1000 kg (same for both panels, so energies are directly comparable) · energies in GJ · dissipative forces ignored · animation time is greatly accelerated (real speeds and periods shown in the readouts).
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+"use strict";
+/* ================= constants ================= */
+const GM = 3.986004418e14;      // m^3 s^-2
+const R  = 6.371e6;             // m
+const m  = 1000;                // kg
+const GMm = GM * m;             // J·m
+const E_R = GMm / R;            // J  (≈ 62.6 GJ)
+const vEsc = Math.sqrt(2 * GM / R);
+const GJ = 1e9;
+const R_AXIS = 10;              // r-axis spans 0..10R
+const E_MIN = -65, E_MAX = 95;  // GJ
+const KE_COL = getCSS('--ke'), GPE_COL = getCSS('--gpe'), TE_COL = getCSS('--te'), CTRL_COL = getCSS('--ctrl');
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+const fmt = (x, d=1) => x.toLocaleString('en', {minimumFractionDigits:d, maximumFractionDigits:d});
+
+/* ================= state ================= */
+const A = { f: 0.75, r: R, vr: 0, playing: !reduced, escaped: false, holdUntil: 0 };
+A.TE   = () => (A.f*A.f - 1) * E_R;                         // J
+A.rmax = () => A.f < 1 ? R / (1 - A.f*A.f) : Infinity;      // m
+A.v    = (r) => { const v2 = 2*(A.TE()/m + GM/r); return v2 > 0 ? Math.sqrt(v2) : 0; };
+function launchA(){ A.r = R; A.vr = A.f * vEsc; A.escaped = false; }
+
+const B = { rR: 3, th: -Math.PI/2, playing: !reduced };
+B.r  = () => B.rR * R;
+B.v  = () => Math.sqrt(GM / B.r());
+B.T  = () => 2*Math.PI*Math.sqrt(Math.pow(B.r(),3)/GM);
+
+let compareOn = false;
+
+/* ================= canvas helpers ================= */
+function ctx2d(cv){
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  }
+  const c = cv.getContext('2d');
+  c.setTransform(dpr,0,0,dpr,0,0);
+  return { c, w, h };
+}
+const PADL = 58, PADR = 16;                 // shared horizontal padding → aligned r-axis
+const xOf = (r, w) => PADL + (r/R) / R_AXIS * (w - PADL - PADR);
+function yOf(E_gj, h, padT, padB){ return padT + (E_MAX - E_gj)/(E_MAX - E_MIN) * (h - padT - padB); }
+
+function dashLine(c, x1,y1,x2,y2, dash, col, lw=1){
+  c.save(); c.setLineDash(dash); c.strokeStyle = col; c.lineWidth = lw;
+  c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke(); c.restore();
+}
+function dot(c, x, y, col, rad=5){
+  c.beginPath(); c.arc(x,y,rad,0,7); c.fillStyle = col; c.fill();
+  c.lineWidth = 1.5; c.strokeStyle = '#fff'; c.stroke();
+}
+function arrow(c, x, y, dx, dy, col){
+  const L = Math.hypot(dx,dy); if (L < 2) return;
+  const ux = dx/L, uy = dy/L;
+  c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(x,y); c.lineTo(x+dx, y+dy); c.stroke();
+  c.beginPath();
+  c.moveTo(x+dx, y+dy);
+  c.lineTo(x+dx - 7*ux + 3.5*uy, y+dy - 7*uy - 3.5*ux);
+  c.lineTo(x+dx - 7*ux - 3.5*uy, y+dy - 7*uy + 3.5*ux);
+  c.closePath(); c.fill();
+}
+/* deterministic starfield */
+function stars(c, w, h, seed){
+  let s = seed;
+  const rnd = () => (s = (s*16807) % 2147483647) / 2147483647;
+  c.fillStyle = 'rgba(255,255,255,.55)';
+  for (let i=0;i<60;i++){
+    const x = rnd()*w, y = rnd()*h, r0 = rnd()*1.1 + .2;
+    c.globalAlpha = .25 + rnd()*.5;
+    c.beginPath(); c.arc(x,y,r0,0,7); c.fill();
+  }
+  c.globalAlpha = 1;
+}
+
+/* ================= PANEL A drawing ================= */
+const vpA = document.getElementById('vpA');
+const grA = document.getElementById('grA');
+
+function drawVpA(){
+  const {c,w,h} = ctx2d(vpA);
+  c.fillStyle = getCSS('--space'); c.fillRect(0,0,w,h);
+  stars(c,w,h, 12345);
+  const midY = h*0.46;
+  // line of motion
+  dashLine(c, xOf(R,w), midY, w-PADR, midY, [2,5], 'rgba(255,255,255,.18)');
+  // planet
+  const x0 = xOf(0,w), pr = xOf(R,w) - x0;
+  const g = c.createRadialGradient(x0-pr*.3, midY-pr*.3, pr*.15, x0, midY, pr);
+  g.addColorStop(0,'#7FA8D9'); g.addColorStop(1,'#274B78');
+  c.beginPath(); c.arc(x0, midY, pr, 0, 7); c.fillStyle = g; c.fill();
+  c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1; c.stroke();
+  c.fillStyle = 'rgba(255,255,255,.75)'; c.font = '11px '+getCSS('--mono');
+  c.fillText('surface (r = R)', xOf(R,w)+5, midY + pr*0.02 + 40);
+  dashLine(c, xOf(R,w), midY-26, xOf(R,w), midY+26, [3,3], 'rgba(255,255,255,.35)');
+  // r_max marker
+  const rm = A.rmax();
+  if (rm <= R_AXIS*R){
+    const xm = xOf(rm,w);
+    dashLine(c, xm, midY-30, xm, midY+30, [4,4], 'rgba(255,180,80,.8)');
+    c.fillStyle = 'rgba(255,200,120,.95)'; c.font = '11px '+getCSS('--mono');
+    c.fillText('r_max', xm+4, midY-34);
+  }
+  // object + velocity arrow
+  const xo = xOf(A.r, w);
+  arrow(c, xo, midY, (A.vr/vEsc)*55, 0, '#FFD37E');
+  dot(c, xo, midY, KE_COL, 6);
+  // tracer to graph below
+  dashLine(c, xo, midY+8, xo, h, [3,4], 'rgba(255,255,255,.4)');
+  // state label
+  c.fillStyle = 'rgba(255,255,255,.9)'; c.font = '600 12px '+getCSS('--disp');
+  let st = A.vr > 0 ? 'rising — KE → GPE' : 'falling back — GPE → KE';
+  if (A.f < 1 && Math.abs(A.r - rm) < 0.02*R) st = 'at r_max — KE = 0 for an instant';
+  if (A.f >= 1) st = A.f > 1 ? 'escaping — never returns (TE > 0)' : 'barely escaping — KE → 0 (TE = 0)';
+  else if (rm > R_AXIS*R && A.vr > 0) st = 'rising — r_max = ' + fmt(rm/R,1) + ' R, beyond this view';
+  if (A.escaped) st = (A.f >= 1 ? 'escaped' : 'left the view') + ' — relaunching…';
+  c.fillText(st, PADL, 20);
+}
+
+function drawGrA(){
+  const {c,w,h} = ctx2d(grA);
+  const padT = 12, padB = 36;
+  c.fillStyle = '#fff'; c.fillRect(0,0,w,h);
+  drawAxes(c,w,h,padT,padB);
+  const TE = A.TE()/GJ, rm = A.rmax();
+  // GPE curve
+  plotCurve(c,w,h,padT,padB, R, R_AXIS*R, r => -GMm/r/GJ, GPE_COL);
+  const rEnd = Math.min(rm, R_AXIS*R);
+  // TE line — ends where it meets GPE (r_max). Beyond that, TE < GPE would
+  // mean KE < 0, which is impossible, so the region is forbidden.
+  const yTE = yOf(TE,h,padT,padB);
+  c.strokeStyle = TE_COL; c.lineWidth = 2.2;
+  c.beginPath(); c.moveTo(xOf(R,w), yTE); c.lineTo(xOf(rEnd,w), yTE); c.stroke();
+  // KE curve up to r_max
+  plotCurve(c,w,h,padT,padB, R, rEnd, r => (A.TE()+GMm/r)/GJ, KE_COL);
+  // r_max marker
+  if (rm <= R_AXIS*R){
+    const xm = xOf(rm,w), y0 = yOf(0,h,padT,padB);
+    dashLine(c, xm, padT, xm, h-padB, [4,4], '#B0763A');
+    c.fillStyle = '#8A5A25'; c.font = '11px '+getCSS('--mono');
+    c.fillText('r_max: KE = 0, TE meets GPE', Math.min(xm+6, w-215), y0 - 8);
+  }
+  // compare line
+  if (compareOn) drawCompareLine(c,w,h,padT,padB);
+  // tracer + live dots
+  const xo = xOf(A.r,w);
+  dashLine(c, xo, 0, xo, h-padB, [3,4], 'rgba(23,33,43,.35)');
+  const keNow = (A.TE()+GMm/A.r)/GJ, gpeNow = -GMm/A.r/GJ;
+  dot(c, xo, yOf(keNow,h,padT,padB), KE_COL);
+  dot(c, xo, yOf(gpeNow,h,padT,padB), GPE_COL);
+  dot(c, xo, yTE, TE_COL);
+  legend(c, w, ['KE',KE_COL], ['TE (constant)',TE_COL], ['GPE',GPE_COL]);
+}
+
+/* ================= PANEL B drawing ================= */
+const vpB = document.getElementById('vpB');
+const grB = document.getElementById('grB');
+
+function drawVpB(){
+  const {c,w,h} = ctx2d(vpB);
+  c.fillStyle = getCSS('--space'); c.fillRect(0,0,w,h);
+  stars(c,w,h, 424242);
+  const cx = w/2, cy = h/2;
+  const scale = (Math.min(w,h)/2 - 8) / (9.4*R);   // px per metre
+  // ghost family of orbits
+  c.strokeStyle = 'rgba(255,255,255,.10)'; c.lineWidth = 1;
+  for (let k=2; k<=9; k++){
+    c.beginPath(); c.arc(cx, cy, k*R*scale, 0, 7); c.stroke();
+  }
+  c.fillStyle = 'rgba(255,255,255,.45)'; c.font = '10.5px '+getCSS('--mono');
+  c.fillText('each circle = a different orbit', cx + 2.2*R*scale, cy - 8.6*R*scale + 10);
+  // planet
+  const pr = Math.max(R*scale, 7);
+  const g = c.createRadialGradient(cx-pr*.3, cy-pr*.3, pr*.15, cx, cy, pr);
+  g.addColorStop(0,'#7FA8D9'); g.addColorStop(1,'#274B78');
+  c.beginPath(); c.arc(cx, cy, pr, 0, 7); c.fillStyle = g; c.fill();
+  // current orbit
+  const ro = B.r()*scale;
+  c.strokeStyle = 'rgba(120,180,255,.85)'; c.lineWidth = 1.6;
+  c.beginPath(); c.arc(cx, cy, ro, 0, 7); c.stroke();
+  // radial line + label
+  const sx = cx + ro*Math.cos(B.th), sy = cy + ro*Math.sin(B.th);
+  dashLine(c, cx, cy, sx, sy, [3,4], 'rgba(255,255,255,.45)');
+  c.fillStyle = 'rgba(255,255,255,.8)'; c.font = '11px '+getCSS('--mono');
+  c.fillText('r = '+fmt(B.rR,2)+' R', cx + (ro*.5)*Math.cos(B.th) + 6, cy + (ro*.5)*Math.sin(B.th) - 6);
+  // velocity arrow (tangential)
+  const vpx = (B.v()/vEsc)*55;
+  arrow(c, sx, sy, -vpx*Math.sin(B.th), vpx*Math.cos(B.th), '#FFD37E');
+  dot(c, sx, sy, GPE_COL, 6);
+}
+
+function drawGrB(){
+  const {c,w,h} = ctx2d(grB);
+  const padT = 12, padB = 36;
+  c.fillStyle = '#fff'; c.fillRect(0,0,w,h);
+  drawAxes(c,w,h,padT,padB);
+  const r0 = 1.2*R;
+  plotCurve(c,w,h,padT,padB, r0, R_AXIS*R, r => -GMm/r/GJ,     GPE_COL);
+  plotCurve(c,w,h,padT,padB, r0, R_AXIS*R, r => -GMm/(2*r)/GJ, TE_COL);
+  plotCurve(c,w,h,padT,padB, r0, R_AXIS*R, r =>  GMm/(2*r)/GJ, KE_COL);
+  if (compareOn) drawCompareLine(c,w,h,padT,padB);
+  // stationary markers at chosen orbit
+  const r = B.r(), xo = xOf(r,w);
+  dashLine(c, xo, padT, xo, h-padB, [3,4], 'rgba(43,99,201,.35)');
+  dot(c, xo, yOf( GMm/(2*r)/GJ ,h,padT,padB), KE_COL);
+  dot(c, xo, yOf(-GMm/r/GJ     ,h,padT,padB), GPE_COL);
+  dot(c, xo, yOf(-GMm/(2*r)/GJ ,h,padT,padB), TE_COL);
+  c.fillStyle = 'var(--muted)';
+  c.fillStyle = '#5A6B7B'; c.font = '11px '+getCSS('--mono');
+  c.fillText('markers move only when you pick a new orbit', PADL+6, padT+12);
+  legend(c, w, ['KE',KE_COL], ['TE (varies with r)',TE_COL], ['GPE',GPE_COL]);
+}
+
+/* ================= shared graph pieces ================= */
+function drawAxes(c,w,h,padT,padB){
+  c.strokeStyle = '#E4EAF0'; c.lineWidth = 1;
+  c.font = '10.5px '+getCSS('--mono'); c.fillStyle = '#7C8B99';
+  // horizontal grid every 25 GJ
+  for (let E = Math.ceil(E_MIN/25)*25; E <= E_MAX; E += 25){
+    const y = yOf(E,h,padT,padB);
+    c.beginPath(); c.moveTo(PADL,y); c.lineTo(w-PADR,y); c.stroke();
+    c.fillText(String(E), 10, y+3.5);
+  }
+  // vertical grid each R
+  for (let k=1; k<=R_AXIS; k++){
+    const x = xOf(k*R,w);
+    c.beginPath(); c.moveTo(x,padT); c.lineTo(x,h-padB); c.stroke();
+    if (k>0 && k%1===0) c.fillText(k===1?'R':k+'R', x-8, h-padB+14);
+  }
+  // x-axis (E = 0)
+  const y0 = yOf(0,h,padT,padB);
+  c.strokeStyle = '#9AA8B5'; c.lineWidth = 1.4;
+  c.beginPath(); c.moveTo(PADL,y0); c.lineTo(w-PADR,y0); c.stroke();
+  // y-axis at r = R? draw at left edge of plot (r=0)
+  c.beginPath(); c.moveTo(PADL,padT); c.lineTo(PADL,h-padB); c.stroke();
+  // dashed line at r=R (surface)
+  dashLine(c, xOf(R,w), padT, xOf(R,w), h-padB, [2,3], '#C4CFDA');
+  c.fillStyle = '#5A6B7B';
+  c.fillText('energy / GJ', 10, padT+4);
+  c.fillText('r / R  (distance from centre)', w - 215, h-6);
+}
+function plotCurve(c,w,h,padT,padB, r1, r2, fE, col){
+  c.strokeStyle = col; c.lineWidth = 2.2;
+  c.beginPath();
+  const N = 220;
+  let started = false;
+  for (let i=0;i<=N;i++){
+    const r = r1 + (r2-r1)*i/N;
+    const E = fE(r);
+    if (E < E_MIN-3 || E > E_MAX+3){ started = false; continue; }
+    const x = xOf(r,w), y = yOf(E,h,padT,padB);
+    if (!started){ c.moveTo(x,y); started = true; } else c.lineTo(x,y);
+  }
+  c.stroke();
+}
+function legend(c, w, ...items){
+  let x = w - PADR - 10;
+  c.font = '600 11px '+getCSS('--disp');
+  for (let i=items.length-1; i>=0; i--){
+    const [label,col] = items[i];
+    const tw = c.measureText(label).width;
+    x -= tw;
+    c.fillStyle = col; c.fillText(label, x, 16);
+    x -= 16;
+    c.fillRect(x+2, 10, 9, 3);
+    x -= 14;
+  }
+}
+function drawCompareLine(c,w,h,padT,padB){
+  const x = xOf(B.r(), w);
+  dashLine(c, x, padT, x, h-padB, [6,4], CTRL_COL, 1.8);
+  c.fillStyle = CTRL_COL; c.font = '600 11px '+getCSS('--disp');
+  c.fillText('satellite’s r', x+5, h-padB-8);
+}
+
+/* ================= simulation ================= */
+const TS_A = 700;    // time acceleration, panel A
+const TS_B = 5000;   // time acceleration, panel B
+let lastT = performance.now();
+
+function step(now){
+  let dt = (now - lastT)/1000; lastT = now;
+  if (dt > 0.05) dt = 0.05;
+
+  if (A.playing){
+    if (A.escaped){
+      if (now >= A.holdUntil) launchA();
+    } else {
+      // semi-implicit Euler on a = -GM/r^2, so the object arcs through the
+      // turning point and falls back down; speed renormalised from energy
+      // conservation each substep to kill numerical drift.
+      const sub = 6, dts = dt*TS_A/sub;
+      for (let i=0;i<sub;i++){
+        const a = -GM / (A.r*A.r);
+        A.vr += a * dts;
+        A.r  += A.vr * dts;
+        if (A.r <= R){ A.r = R; A.vr = A.f * vEsc; break; }   // lands → relaunch
+        const vE = A.v(A.r);
+        A.vr = (A.vr < 0 ? -1 : 1) * vE;
+        if (A.r > 10.4*R){ A.escaped = true; A.holdUntil = now + 900; break; }
+      }
+    }
+  }
+  if (B.playing){
+    const om = Math.sqrt(GM / Math.pow(B.r(),3));
+    B.th += om * dt * TS_B;
+    if (B.th > 7) B.th -= 2*Math.PI;
+  }
+
+  drawVpA(); drawGrA(); drawVpB(); drawGrB();
+  updateReadouts();
+  requestAnimationFrame(step);
+}
+
+/* ================= readouts & compare ================= */
+const roA = document.getElementById('roA'), roB = document.getElementById('roB');
+const cmpText = document.getElementById('compareText');
+
+function updateReadouts(){
+  const ke = (A.TE()+GMm/A.r)/GJ, gpe = -GMm/A.r/GJ, te = A.TE()/GJ;
+  const rm = A.rmax();
+  roA.innerHTML =
+    `<span>r = <b>${fmt(A.r/R,2)} R</b></span>` +
+    `<span>v = <b>${fmt(Math.abs(A.vr)/1000,2)} km/s</b></span>` +
+    `<span class="ke">KE = <b>${fmt(Math.max(ke,0))} GJ</b></span>` +
+    `<span class="gpe">GPE = <b>${fmt(gpe)} GJ</b></span>` +
+    `<span class="te">TE = <b>${fmt(te)} GJ</b></span>` +
+    `<span>r_max = <b>${isFinite(rm) ? fmt(rm/R,2)+' R' : '∞ (escapes)'}</b></span>`;
+
+  const r = B.r();
+  roB.innerHTML =
+    `<span>r = <b>${fmt(B.rR,2)} R</b></span>` +
+    `<span>v = <b>${fmt(B.v()/1000,2)} km/s</b></span>` +
+    `<span>T = <b>${fmt(B.T()/3600,1)} h</b></span>` +
+    `<span class="ke">KE = <b>${fmt(GMm/(2*r)/GJ)} GJ</b></span>` +
+    `<span class="gpe">GPE = <b>${fmt(-GMm/r/GJ)} GJ</b></span>` +
+    `<span class="te">TE = <b>${fmt(-GMm/(2*r)/GJ)} GJ</b></span>`;
+
+  if (compareOn){
+    const rS = B.r();
+    const satKE = GMm/(2*rS)/GJ;
+    let aPart;
+    if (rS <= A.rmax()){
+      const linKE = (A.TE()+GMm/rS)/GJ;
+      aPart = `projectile KE = ${fmt(linKE)} GJ (set by launch speed)`;
+    } else {
+      aPart = `projectile never reaches this r (its r_max = ${fmt(A.rmax()/R,2)} R)`;
+    }
+    cmpText.textContent = `At r = ${fmt(B.rR,2)} R  →  ${aPart}  ·  satellite KE = ${fmt(satKE)} GJ (fixed by the orbit)`;
+  }
+}
+
+/* ================= controls ================= */
+const fSlider = document.getElementById('fSlider'), fVal = document.getElementById('fVal');
+const rSlider = document.getElementById('rSlider'), rVal = document.getElementById('rVal');
+const playA = document.getElementById('playA'), resetA = document.getElementById('resetA');
+const playB = document.getElementById('playB');
+
+function setF(f){
+  A.f = f; fSlider.value = f;
+  launchA();
+  fVal.textContent = `v₀ = ${fmt(f*vEsc/1000,2)} km/s  =  ${fmt(f,2)} × v_esc` + (f===1 ? '  (exactly escape speed)' : '');
+}
+function setRB(rr){
+  B.rR = rr; rSlider.value = rr;
+  rVal.textContent = `r = ${fmt(rr,2)} R  =  ${fmt(rr*R/1e6,0)} × 10⁶ m`;
+}
+fSlider.addEventListener('input', () => setF(parseFloat(fSlider.value)));
+rSlider.addEventListener('input', () => setRB(parseFloat(rSlider.value)));
+playA.addEventListener('click', () => { A.playing = !A.playing; playA.textContent = A.playing ? 'Pause' : 'Play'; });
+playB.addEventListener('click', () => { B.playing = !B.playing; playB.textContent = B.playing ? 'Pause' : 'Play'; });
+resetA.addEventListener('click', () => launchA());
+document.getElementById('cmpToggle').addEventListener('change', e => {
+  compareOn = e.target.checked;
+  cmpText.classList.toggle('on', compareOn);
+});
+if (reduced){ playA.textContent = 'Play'; playB.textContent = 'Play'; }
+
+/* ================= checkpoints ================= */
+const CPS = [
+  { kind:'mcq', title:'Who actually moves along the curves?',
+    q:'Press play on both panels and watch for a while. As time passes, which dot actually travels along its energy curves?',
+    opts:['Only A — the projectile','Only B — the satellite','Both of them','Neither of them'], correct:0,
+    expl:'In A, one object changes its r as time passes, so its point slides back and forth along the KE and GPE curves. In B, a satellite in a circular orbit stays at one r forever — the curves are a family of different orbits. Its markers only move when you choose a different orbit with the slider (which in reality needs an engine burn).' },
+
+  { kind:'predict', title:'What can move the TE line?',
+    q:'Use the button to set the launch speed to 0.60 v_esc. Predict: if you raise it to 0.90 v_esc, what happens to (i) the green TE line, (ii) r_max, and (iii) the GPE curve? Then drag the slider and check.',
+    setup:{ f:0.60 },
+    expl:'TE = ½mv₀² − GMm/R, so a faster launch makes TE less negative — the green line rises. r_max is where the TE line meets the GPE curve, so it slides outward (rapidly, as TE → 0). The GPE curve itself never changes: it depends only on M and m, not on how the object was launched.' },
+
+  { kind:'mcq', title:'Boosting a satellite to a higher orbit',
+    q:'A satellite is boosted from a circular orbit at r = 2R to one at r = 4R. What happens to its TE and its KE? (Try it on panel B.)',
+    opts:['Both increase','TE increases, but KE decreases','TE decreases, but KE increases','Both decrease'], correct:1,
+    expl:'TE = −GMm/2r becomes less negative — it increases, which is why the rocket must supply energy. But KE = GMm/2r falls: the satellite actually moves slower in the higher orbit. The energy supplied (plus the KE given up) all goes into GPE. This surprises many students: adding energy makes the satellite slow down.' },
+
+  { kind:'mcq', title:'Same r, same KE?',
+    q:'Suppose the projectile in A happens to pass through the exact r where the satellite in B is orbiting. Do they have the same KE at that moment?',
+    opts:['Always — same r, same KE','Never','Only by coincidence, for one particular launch speed'], correct:2,
+    expl:'The projectile’s KE at r is TE + GMm/r and depends on how fast it was launched — you can make it almost anything. The satellite’s KE is locked to GMm/2r by the circular-orbit condition. They match only if the launch speed happens to be tuned just right. Switch on “Compare at the satellite’s r” above and vary the launch speed to see both numbers.' },
+
+  { kind:'predict', title:'Launching at exactly escape speed',
+    q:'Use the button to set the launch speed to exactly v_esc (1.00). Before pressing play, predict: where does the TE line sit, and what is r_max? Then watch the motion.',
+    setup:{ f:1.00 },
+    expl:'TE = 0 exactly — the green line lies on the x-axis and never meets the GPE curve, so there is no r_max. The object “just barely” escapes, with KE → 0 as r → ∞. Notice this is the one special launch for which panel A’s KE curve is a mirror image of GPE about the x-axis — for every slower launch, the mirror line is the (negative) TE line instead.' },
+
+  { kind:'mcq', title:'“Mirror image” — about which line?',
+    q:'Students often quote: “the KE graph is a mirror image of the GPE graph.” About which line is the reflection, in each panel?',
+    opts:['Both panels: about the x-axis','A: about the TE line · B: KE mirrors TE about the x-axis (and KE = ½|GPE|)','A: about the x-axis · B: about the TE line'], correct:1,
+    expl:'In A, KE = TE − GPE with TE fixed, so KE and GPE are reflections of each other about the horizontal TE line (not the x-axis!). In B, TE = −KE, so it is KE and TE that mirror about the x-axis, while KE is half the magnitude of GPE. Same words, two different geometrical facts — quote them carefully in exams.' }
+];
+
+const cpList = document.getElementById('cpList');
+CPS.forEach((cp, i) => {
+  const el = document.createElement('div');
+  el.className = 'cp';
+  const kindLabel = cp.kind === 'mcq' ? 'MCQ' : 'Predict · run · reveal';
+  let inner = `<button class="head" aria-expanded="false">
+      <span class="num">${i+1}</span><span class="qtitle">${cp.title}</span><span class="kind">${kindLabel}</span>
+    </button><div class="body"><p style="margin:6px 0 0">${cp.q}</p>`;
+  if (cp.kind === 'mcq'){
+    inner += `<div class="opts">` + cp.opts.map((o,j)=>`<button data-j="${j}">${o}</button>`).join('') + `</div>`;
+  } else {
+    inner += `<div class="actions">
+       <button class="setup">Set up panel A (v₀ = ${fmt(cp.setup.f,2)} × v_esc)</button>
+       <button class="reveal">Reveal explanation</button></div>`;
+  }
+  inner += `<div class="expl">${cp.expl}</div></div>`;
+  el.innerHTML = inner;
+  cpList.appendChild(el);
+
+  const head = el.querySelector('.head');
+  head.addEventListener('click', () => {
+    const open = el.classList.toggle('open');
+    head.setAttribute('aria-expanded', open);
+  });
+  if (cp.kind === 'mcq'){
+    el.querySelectorAll('.opts button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const j = +btn.dataset.j;
+        el.querySelectorAll('.opts button').forEach(b => b.classList.remove('correct','wrong'));
+        if (j === cp.correct){
+          btn.classList.add('correct');
+          el.querySelector('.expl').classList.add('show');
+        } else {
+          btn.classList.add('wrong');
+        }
+      });
+    });
+  } else {
+    el.querySelector('.setup').addEventListener('click', () => {
+      setF(cp.setup.f);
+      A.playing = true; playA.textContent = 'Pause';
+      window.scrollTo({top: 0, behavior:'smooth'});
+    });
+    el.querySelector('.reveal').addEventListener('click', () => {
+      el.querySelector('.expl').classList.add('show');
+    });
+  }
+});
+
+/* ================= curve tooltips (hover / tap) ================= */
+const TT_INFO = {
+  A: {
+    KE: { title:'KE — kinetic energy', eq:'KE(r) = TE + GMm/r',
+      text:'Changes continuously as the object moves: rising, KE converts into GPE; falling, GPE converts back into KE. Its value at any r <b>depends on the launch speed</b> (through TE) — it is not fixed by position alone.' },
+    GPE:{ title:'GPE — gravitational potential energy', eq:'GPE = −GMm/r',
+      text:'Set by <b>position only</b>, and identical in both scenarios — gravity does not care how the object is moving, only where it is. As the object rises, GPE increases (becomes less negative).' },
+    TE: { title:'TE — total energy (constant!)', eq:'TE = KE + GPE = ½mv₀² − GMm/R',
+      text:'One object, one scenario. After launch, energy only converts between KE and GPE, so <b>their sum never changes</b> — this line stays flat throughout the motion. It ends at r_max, where TE meets GPE: beyond that, KE would be negative, which is impossible. Only a different launch speed can move this line.' }
+  },
+  B: {
+    KE: { title:'KE — kinetic energy of the orbit', eq:'GMm/r² = mv²/r  ⇒  KE = GMm/2r',
+      text:'Derived from gravity providing the centripetal force. KE is <b>fixed by the orbit</b>: while the satellite circles at this r, its KE is constant. A different r is a totally different setup — a different orbit with a different (constant) KE.' },
+    GPE:{ title:'GPE — gravitational potential energy', eq:'GPE = −GMm/r',
+      text:'Same expression as in the <b>radial-projection case</b> on the left. But in a circular orbit r never changes, so GPE stays constant throughout the motion — unlike the projected object, whose GPE changes from moment to moment.' },
+    TE: { title:'TE — one value per orbit', eq:'TE = KE + GPE = −GMm/2r',
+      text:'TE differs between orbital radii because <b>each r is a completely different setup</b> — not the same object at a later time. Within any one orbit, KE, GPE and TE are all constant. Moving between orbits needs an engine (external work) — that is what changes TE.' }
+  }
+};
+
+function makeTooltip(card){
+  const el = document.createElement('div');
+  el.className = 'tooltip';
+  card.appendChild(el);
+  return el;
+}
+
+function attachTooltips(cv, panelKey, curvesFn){
+  const card = cv.closest('.card');
+  const tt = makeTooltip(card);
+  let pinned = null;
+
+  function hit(e){
+    const rect = cv.getBoundingClientRect();
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    const w = rect.width, h = rect.height, padT = 12, padB = 36;
+    const r = (x - PADL) / (w - PADL - PADR) * R_AXIS * R;
+    if (r < 0.2*R || r > R_AXIS*R || x < PADL) return null;
+    let best = null, bestD = 15;             // 15 px capture radius
+    for (const cur of curvesFn()){
+      if (r < cur.rMin || r > cur.rMax) continue;
+      const E = cur.f(r);
+      const cy = yOf(E, h, padT, padB);
+      const d = Math.abs(y - cy);
+      if (d < bestD){ bestD = d; best = {cur, r, E, x, y}; }
+    }
+    return best;
+  }
+
+  function show(hitRes){
+    const {cur, r, E, x, y} = hitRes;
+    const info = TT_INFO[panelKey][cur.key];
+    tt.style.borderLeftColor = cur.col;
+    tt.innerHTML =
+      `<div class="tt-title" style="color:${cur.col === '#178A4C' ? '#7FDCA4' : cur.col === '#2B63C9' ? '#9DBEF5' : '#F5A29C'}">${info.title}</div>` +
+      `<div class="tt-eq">${info.eq}</div>` +
+      `<div>${info.text}</div>` +
+      `<div class="tt-val">at r = ${fmt(r/R,2)} R:  ${cur.key} = ${fmt(E)} GJ</div>` +
+      `<div class="tt-pin">${pinned ? 'tap elsewhere to unpin' : 'tap to pin this note'}</div>`;
+    tt.style.display = 'block';
+    // position within the card, clamped
+    const left = Math.min(Math.max(cv.offsetLeft + x + 16, 6), card.clientWidth - 300);
+    let top = cv.offsetTop + y + 14;
+    if (top + tt.offsetHeight > cv.offsetTop + cv.clientHeight) top = cv.offsetTop + y - tt.offsetHeight - 12;
+    tt.style.left = left + 'px';
+    tt.style.top  = Math.max(top, 6) + 'px';
+  }
+
+  cv.addEventListener('pointermove', e => {
+    if (pinned) return;
+    const h = hit(e);
+    if (h) show(h); else tt.style.display = 'none';
+  });
+  cv.addEventListener('pointerdown', e => {
+    const h = hit(e);
+    if (h){ pinned = h; show(h); }
+    else { pinned = null; tt.style.display = 'none'; }
+  });
+  cv.addEventListener('pointerleave', () => { if (!pinned) tt.style.display = 'none'; });
+}
+
+// panel A curves depend on the current launch speed → rebuilt on each hit test
+attachTooltips(grA, 'A', () => [
+  { key:'KE',  col:KE_COL,  rMin:R,     rMax:Math.min(A.rmax(), R_AXIS*R), f:r => (A.TE()+GMm/r)/GJ },
+  { key:'TE',  col:TE_COL,  rMin:R,     rMax:Math.min(A.rmax(), R_AXIS*R), f:r => A.TE()/GJ },
+  { key:'GPE', col:GPE_COL, rMin:R,     rMax:R_AXIS*R,                     f:r => -GMm/r/GJ }
+]);
+attachTooltips(grB, 'B', () => [
+  { key:'KE',  col:KE_COL,  rMin:1.2*R, rMax:R_AXIS*R, f:r =>  GMm/(2*r)/GJ },
+  { key:'TE',  col:TE_COL,  rMin:1.2*R, rMax:R_AXIS*R, f:r => -GMm/(2*r)/GJ },
+  { key:'GPE', col:GPE_COL, rMin:1.2*R, rMax:R_AXIS*R, f:r => -GMm/r/GJ }
+]);
+
+/* ================= KaTeX ================= */
+window.addEventListener('load', () => {
+  document.querySelectorAll('.eq').forEach(el => {
+    const tex = el.dataset.tex;
+    try { katex.render(tex, el, {throwOnError:false, displayMode:false}); }
+    catch(e){ el.textContent = tex; }
+  });
+});
+
+/* ================= boot ================= */
+setF(0.75); setRB(3);
+window.addEventListener('resize', () => { drawVpA(); drawGrA(); drawVpB(); drawGrB(); });
+requestAnimationFrame(t => { lastT = t; requestAnimationFrame(step); });
+</script>
+</body>
+</html>
