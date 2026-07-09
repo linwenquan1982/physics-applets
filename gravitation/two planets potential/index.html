@@ -31,14 +31,19 @@
   #tip{
     position:absolute; pointer-events:none; display:none; z-index:5;
     background:rgba(17,22,29,.96); border:1px solid var(--line); border-radius:8px;
-    padding:9px 12px; font-size:14px; max-width:300px; line-height:1.5;
+    padding:9px 12px; font-size:14px; max-width:340px; line-height:1.5;
     box-shadow:0 4px 14px rgba(0,0,0,.5);
   }
   #tip .ln{white-space:nowrap; font-variant-numeric:tabular-nums;}
   #hint{
-    position:absolute; left:12px; bottom:8px; font-size:13px; color:var(--muted);
-    background:rgba(11,15,20,.65); padding:4px 10px; border-radius:6px;
-    pointer-events:none; z-index:4;
+    position:absolute; left:12px; bottom:10px; font-size:13px; color:#f0d78a;
+    background:#1a2029; padding:6px 12px; border-radius:7px;
+    border:1px solid var(--gold); pointer-events:none; z-index:4;
+    animation:hintPulse 2.2s ease-in-out infinite;
+  }
+  @keyframes hintPulse{
+    0%,100%{box-shadow:0 0 3px rgba(245,197,66,.2);}
+    50%{box-shadow:0 0 14px rgba(245,197,66,.55);}
   }
   #panel{
     flex:0 0 348px; background:var(--panel); border-left:1px solid var(--line);
@@ -172,6 +177,8 @@ const S = {
   showG: false,
   showParts: false,                  // show phi_A / phi_B individually in steps 4-5
   pin: null,                         // clicked inspection point {x}
+  info: null,                        // open "?" explainer: 'E' | 'needAB' | 'needBA' | 'peak'
+  hotspots: [],                      // clickable label rects, rebuilt every draw
   flight: null
 };
 let raf = null;
@@ -302,6 +309,59 @@ function sarrow(ctx, X, y1, y2, color){          // thin single-headed arrow, he
   ctx.lineTo(X-4, y2 - 8*s); ctx.lineTo(X+4, y2 - 8*s); ctx.closePath(); ctx.fill();
   ctx.restore();
 }
+function harrow(ctx, X, Y, dx, color){           // horizontal arrow from (X,Y), head at X+dx
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2.4;
+  const s = Math.sign(dx) || 1;
+  ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(X + dx - 7*s, Y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(X + dx, Y);
+  ctx.lineTo(X + dx - 9*s, Y - 4.5); ctx.lineTo(X + dx - 9*s, Y + 4.5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+/* clickable label (1+ lines): dotted outline with a "?" badge on the border */
+function chipLabel(ctx, id, lines, X, Y, color, align, size){
+  size = size || 13;
+  if(typeof lines === 'string') lines = [lines];
+  const lh = size + 5;
+  ctx.save(); ctx.font = '600 ' + size + 'px "Segoe UI",sans-serif';
+  let w = 0; for(const t of lines) w = Math.max(w, ctx.measureText(t).width);
+  ctx.restore();
+  const H = lines.length * lh;
+  const x0 = align==='right' ? X - w : (align==='center' ? X - w/2 : X);
+  const yTop = Y - H/2;
+  lines.forEach((t,i)=> label(ctx, t, x0, yTop + lh*(i+0.5), color, 'left', size, true));
+  const r = {x: x0-7, y: yTop-4, w: w+14, h: H+8};
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.restore();
+  /* "?" badge sitting on the outline (top-right corner) */
+  const bx = r.x + r.w, by = r.y;
+  ctx.save(); ctx.fillStyle = '#11161d'; ctx.strokeStyle = color; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(bx, by, 8, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  label(ctx, '?', bx, by+0.5, color, 'center', 11.5, true);
+  S.hotspots.push({id, x:r.x-4, y:r.y-13, w:r.w+18, h:r.h+17});
+}
+/* thin pointer arrow from a text anchor to a target point */
+function pointTo(ctx, fromX, fromY, toX, toY, color){
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.3; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(fromX, fromY); ctx.lineTo(toX, toY); ctx.stroke();
+  const dx = fromX-toX, dy = fromY-toY, L = Math.hypot(dx,dy) || 1;
+  const ux = dx/L, uy = dy/L;
+  ctx.beginPath(); ctx.moveTo(toX, toY);
+  ctx.lineTo(toX + ux*9 - uy*3.5, toY + uy*9 + ux*3.5);
+  ctx.lineTo(toX + ux*9 + uy*3.5, toY + uy*9 - ux*3.5);
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+/* hand-drawn style curved arrow (quadratic), head at the end point */
+function swoosh(ctx, sx, sy, cx2, cy2, ex, ey, color){
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(cx2, cy2, ex, ey); ctx.stroke();
+  const dx = ex-cx2, dy = ey-cy2, L = Math.hypot(dx,dy) || 1;
+  const ux = dx/L, uy = dy/L;
+  ctx.beginPath(); ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - ux*12 + uy*5, ey - uy*12 - ux*5);
+  ctx.lineTo(ex - ux*12 - uy*5, ey - uy*12 + ux*5);
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
 
 /* ---------- main draw ---------- */
 function draw(){ computeScale(); drawPhi(); }
@@ -310,6 +370,7 @@ function drawPhi(){
   const ctx = phiCv.getContext('2d');
   ctx.clearRect(0,0,PW,PH);
   if(PW < 40) return;
+  S.hotspots.length = 0;
   const X0 = xSurfA(), X1 = xSurfB(), xY = xPeak();
   const y0 = py(0);
   const s = S.step;
@@ -364,7 +425,7 @@ function drawPhi(){
       const ex2 = S.dir==='AB' ? px(X1)+6 : needX('BA');
       hline(ctx, py(E), ex1, ex2, COL.E);                          // total energy (green)
       const lx = S.dir==='AB' ? px(X1)-8 : px(X0)+8;
-      label(ctx, 'total energy', lx, py(E)-11, COL.E, S.dir==='AB'?'right':'left', 13);
+      chipLabel(ctx, 'E', 'total energy', lx, py(E)-14, COL.E, S.dir==='AB'?'right':'left', 13);
     }
   }
 
@@ -402,7 +463,7 @@ function drawPhi(){
       ctx.lineTo(ax + ux*9 - uy*3.5, ay + uy*9 + ux*3.5);
       ctx.lineTo(ax + ux*9 + uy*3.5, ay + uy*9 - ux*3.5);
       ctx.closePath(); ctx.fill(); ctx.restore();
-      label(ctx, 'max resultant φ — and g = 0', tx, ty, '#dbe4ee', flip>0?'left':'right', 13);
+      chipLabel(ctx, 'peak', 'max resultant φ and g = 0', tx, ty, '#dbe4ee', flip>0?'left':'right', 13);
     }
 
     const dirs = S.dir === 'both' ? ['AB','BA'] : [S.dir];
@@ -416,16 +477,16 @@ function drawPhi(){
       /* orange REQUIRED arrow, fully outside the curve; label outward */
       varrow(ctx, nX, yS, py(pY), COL.N);
       const midN = (yS+py(pY))/2;
-      label(ctx, 'KE required = '+f3(minKE(d))+' J', nX - side*9, midN,
-            COL.N, side>0?'right':'left', 13.5, true);
+      chipLabel(ctx, 'need'+d, ['KE required', '= '+f3(minKE(d))+' J'], nX - side*9, midN,
+                COL.N, side>0?'right':'left', 13.5);
       /* green GIVEN arrow, between the orange arrow and the surface */
       if(S.dir !== 'both'){
         const E = phi(xs) + launchKE()/S.m;
         varrow(ctx, px(xs) - side*20, yS, py(E), COL.E);
         let midG = (yS+py(E))/2;
-        if(Math.abs(midG - midN) < 17) midG += 20;
-        label(ctx, 'KE given = '+f3(launchKE())+' J', nX - side*9, midG,
-              COL.E, side>0?'right':'left', 13.5, true);
+        if(Math.abs(midG - midN) < 46) midG = midN + 52;   // keep clear of the 2-line chip
+        label(ctx, 'KE given', nX - side*9, midG - 9, COL.E, side>0?'right':'left', 13.5, true);
+        label(ctx, '= '+f3(launchKE())+' J', nX - side*9, midG + 9, COL.E, side>0?'right':'left', 13.5, true);
       }
     }
 
@@ -449,6 +510,17 @@ function drawPhi(){
       dot(ctx, Xo, y0-7, 6.5, '#ffffff');                       // real object on the axis
       dot(ctx, Xo, py(phi(F.x)), 4, '#ffffff');                 // its φ on the curve
       vline(ctx, Xo, y0-7, py(phi(F.x)), '#66788a', [2,3]);
+      /* g on the object: toward A before Y, toward B after Y.
+         Always visible (except essentially AT Y) — length shrinks visually,
+         with a floor so students never think g = 0 in a region around Y. */
+      const gv = gx(F.x);
+      const gmax = Math.max(Math.abs(gx(X0)), Math.abs(gx(X1)));
+      if(Math.abs(F.x - xY) > 0.5){
+        const frac = Math.min(1, Math.abs(gv)/gmax);
+        const alen = (Math.sign(gv)||1) * (10 + 48*Math.pow(frac, 0.35));
+        harrow(ctx, Xo, y0-28, alen, COL.g);
+        label(ctx, 'g', Xo + alen + (Math.sign(gv)||1)*13, y0-28, COL.g, 'center', 13.5, true);
+      }
       if(Math.abs(F.x - xY) < (X1-X0)*0.02 && !F.done){
         label(ctx, 'g = 0 here — but it keeps moving!', px(xY), py(pY)-28, COL.g, 'center', 14, true);
       }
@@ -456,6 +528,90 @@ function drawPhi(){
   }
 
   drawPin(ctx, y0, X0, X1);
+  drawInfo(ctx, y0, X0, X1);
+}
+
+/* ---------- "?" explainer popups (steps 4-5) ---------- */
+function drawInfo(ctx, y0, X0, X1){
+  if(S.step < 4 || !S.info) return;
+  const hs = S.hotspots.find(h => h.id === S.info);
+  if(!hs){ S.info = null; return; }
+  const xY = xPeak(), pY = phi(xY);
+  const ax = hs.x + hs.w + 10, ay = hs.y + hs.h/2;
+
+  if(S.info === 'E' && S.dir !== 'both'){
+    const d = S.dir, xs = d==='AB' ? X0 : X1, side = d==='AB' ? 1 : -1;
+    const sub = d==='AB' ? 'X' : 'Z';
+    const yS = py(phi(xs));
+    const E = phi(xs) + launchKE()/S.m, yE = py(E);
+    const gpe = S.m * phi(xs), ke = launchKE();
+    const CY = '#38cfe0';
+    /* pointer note: GPE at the launch-surface point of the resultant curve */
+    const gx1 = px(xs) + side*76, gy1 = yS - 46;
+    pointTo(ctx, gx1 - side*6, gy1 + 8, px(xs) + side*3, yS - 4, '#cfd6de');
+    label(ctx, 'GPE at '+sub, gx1, gy1 - 5, '#cfd6de', side>0?'left':'right', 14.5, true);
+    /* pointer note: KE given, at the green arrow */
+    const midG2 = (yS + yE)/2;
+    const kx1 = px(xs) + side*95, ky1 = midG2 + 20;
+    pointTo(ctx, kx1 - side*6, ky1 - 6, px(xs) - side*15, midG2, COL.E);
+    label(ctx, 'KE given', kx1, ky1 + 8, COL.E, side>0?'left':'right', 14.5, true);
+    /* cyan link: GPE note --curve--> KE note, with "+" at the curve's midpoint */
+    const s1x = gx1 + side*86, s1y = gy1 - 14;
+    const e1x = kx1 + side*88, e1y = ky1 + 20;
+    /* sign placed a fixed 20px off the curve's midpoint, on the outer (control-point) side */
+    const midSign = (txt, msx, msy, mcx, mcy, mex, mey) => {
+      const mx = 0.25*msx + 0.5*mcx + 0.25*mex, my = 0.25*msy + 0.5*mcy + 0.25*mey;
+      let ddx = mcx - mx, ddy = mcy - my;
+      const LL = Math.hypot(ddx, ddy) || 1;
+      label(ctx, txt, mx + ddx/LL*20, my + ddy/LL*20, CY, 'center', 24, true);
+    };
+    const c1x = (s1x+e1x)/2 + side*58, c1y = (s1y+e1y)/2 + 10;
+    swoosh(ctx, s1x, s1y, c1x, c1y, e1x, e1y, CY);
+    midSign('+', s1x, s1y, c1x, c1y, e1x, e1y);
+    /* cyan swoosh: KE note --curve--> the "total energy" caption, with "=" at its midpoint */
+    const sx = kx1 + side*72, sy = ky1 - 28;
+    const ex = d==='AB' ? px(X1) - 195 : px(X0) + 195;
+    const ey = yE + 12;
+    const c2x = (sx+ex)/2 + side*70, c2y = sy;
+    swoosh(ctx, sx, sy, c2x, c2y, ex, ey, CY);
+    midSign('=', sx, sy, c2x, c2y, ex, ey);
+    /* popup below the energy line, so the caption and green line stay visible */
+    const bpx = d==='AB' ? hs.x - 355 : hs.x + hs.w - 10;
+    showTip(bpx, hs.y + hs.h + 42,
+      `<div class="ln"><b>Total energy = GPE at ${sub} + KE given</b></div>
+       <div class="ln subA" style="padding-left:14px">• GPE at ${sub} = mφ<sub>${sub}</sub> = ${f3(gpe)} J</div>
+       <div class="ln have" style="padding-left:14px">• KE given = ${f3(ke)} J <span class="dim">(green arrow)</span></div>
+       <div class="ln">Therefore, total energy = ${f3(gpe)} + ${f3(ke)} = <b>${f3(gpe + ke)} J</b></div>`);
+  }
+  else if(S.info === 'needAB' || S.info === 'needBA'){
+    const d = S.info.slice(4);
+    const xs = d==='AB' ? X0 : X1;
+    const sub = d==='AB' ? 'X' : 'Z';
+    const other = d==='AB' ? 'B' : 'A';
+    const gp = pY - phi(xs);
+    showTip(ax, ay,
+      `<div class="ln"><b>KE required</b> <span class="dim">— to climb from ${sub} to Y</span></div>
+       <div class="ln need">= gain in GPE from ${sub} to Y</div>
+       <div class="ln need">= m(φ<sub>Y</sub> − φ<sub>${sub}</sub>)</div>
+       <div class="ln need">= ${f3(S.m)} × (${f3(pY)} − (${f3(phi(xs))}))</div>
+       <div class="ln need">= <b>${f3(S.m*gp)} J</b></div>
+       <div class="dim">Given exactly this, it reaches Y with zero speed — beyond Y, planet ${other}'s pull drags it in by itself.</div>`);
+  }
+  else if(S.info === 'peak'){
+    /* flat tangent at the maximum */
+    ctx.save(); ctx.strokeStyle = '#dbe4ee'; ctx.lineWidth = 2; ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.moveTo(px(xY)-55, py(pY)); ctx.lineTo(px(xY)+55, py(pY)); ctx.stroke();
+    ctx.restore();
+    label(ctx, 'slope = 0', px(xY), py(pY)+17, '#dbe4ee', 'center', 12.5);
+    /* popup below the point so the peak itself stays visible */
+    showTip(px(xY) - 160, py(pY) + 46,
+      `<div class="ln"><b>Why is g = 0 here?</b></div>
+       <div class="ln" style="padding-left:14px;color:#f5c542">• g = −dφ/dr</div>
+       <div class="ln" style="padding-left:14px">• the field = <b>negative slope</b> of the φ graph</div>
+       <div class="ln" style="padding-left:14px">• at the maximum: slope dφ/dr = 0</div>
+       <div class="ln" style="color:#f5c542"><b>⇒ g = 0</b></div>
+       <div class="dim">A's pull and B's pull exactly cancel at this point.</div>`);
+  }
 }
 
 function findTurn(x0, dir, Espec){
@@ -478,7 +634,7 @@ function findTurn(x0, dir, Espec){
 /* ---------- inspector (click to show, follows the mouse, click again to hide) ---------- */
 function drawPin(ctx, y0, X0, X1){
   const s = S.step;
-  if(s >= 4){ tip.style.display = 'none'; hint.style.display = 'none'; return; }
+  if(s >= 4){ hint.style.display = 'none'; if(!S.info) tip.style.display = 'none'; return; }
   if(!S.pin){ tip.style.display = 'none'; hint.style.display = 'block'; return; }
   hint.style.display = 'none';
   const hx = Math.min(Math.max(S.pin.x, X0+0.3), X1-0.3);
@@ -486,6 +642,14 @@ function drawPin(ctx, y0, X0, X1){
 
   if(s === 1){
     const v = phiA(hx);
+    /* distance bracket measured from A's centre */
+    ctx.save(); ctx.strokeStyle = COL.A; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(px(0), y0+18); ctx.lineTo(Xp, y0+18); ctx.stroke();
+    for(const xx of [px(0), Xp]){
+      ctx.beginPath(); ctx.moveTo(xx, y0+13); ctx.lineTo(xx, y0+23); ctx.stroke();
+    }
+    ctx.restore();
+    label(ctx, 'r = '+f3(hx), (px(0)+Xp)/2, y0+33, COL.A, 'center', 13.5, true);
     vline(ctx, Xp, y0, py(v), '#66788a');
     dot(ctx, Xp, py(v), 5, COL.A);
     showTip(Xp, py(v),
@@ -588,7 +752,7 @@ const STEPS = [
       <span class="chip" id="whyNeg">why negative?</span>`},
   {t:'add B',   cap:`Planet <span class="subB">B</span> obeys the <b>same law</b> — but its distance d is measured <b>from B</b>. Click along the axis: going right, d shrinks, so <span class="subB">φ<sub>B</sub></span> deepens toward B. Same curve, mirrored.`},
   {t:'sum',     cap:`Resultant <span class="subR">φ = φ<sub>A</sub> + φ<sub>B</sub></span>: at each r, simply <b>add the two values</b> (φ is a scalar). Click the graph — the red arrow is the total of the two.`},
-  {t:'min KE',  cap:`<span class="have"><b>Green</b></span> = KE given. <span class="need"><b>Orange</b></span> = KE required to reach the top of the barrier at Y — beyond it, the other planet pulls the object in. A heavier object needs more KE, but the same launch <i>speed</i>.`},
+  {t:'min KE',  cap:`<span class="have"><b>Green</b></span> = KE given. <span class="need"><b>Orange</b></span> = KE required to reach the top of the barrier at Y — beyond it, the other planet pulls the object in. Click any dotted <b>?</b> label on the graph for an explanation.`},
   {t:'g–x',     cap:`<span style="color:#f5c542">g = −dφ/dx</span> (gold curve, its own scale): the field is the <b>negative slope</b> of φ. Steep curve → strong g. At the peak Y the slope is zero → <b>g = 0</b>… but an object passing Y still has velocity, so it keeps moving.`}
 ];
 const stepsDiv = document.getElementById('steps');
@@ -600,12 +764,13 @@ STEPS.forEach((st,i)=>{
 });
 function setStep(n){
   S.step = n;
-  S.flight = null; S.pin = null; stopAnim();
+  S.flight = null; S.pin = null; S.info = null; stopAnim();
   document.querySelectorAll('.step').forEach((el,i)=> el.classList.toggle('on', i+1===n));
   document.getElementById('caption').innerHTML = STEPS[n-1].cap;
   document.getElementById('launchSec').style.display = n>=4 ? 'block' : 'none';
   document.getElementById('showPartsRow').style.display = n>=4 ? 'flex' : 'none';
   if(n===5){ S.showG = true; document.getElementById('showG').checked = true; }
+  else if(n===4){ S.showG = false; document.getElementById('showG').checked = false; }
   const w = document.getElementById('whyNeg');
   if(w){
     w.onmouseenter = ()=>{ showTip(60, 60,
@@ -633,7 +798,7 @@ bindRange('m','m');
 document.querySelectorAll('input[name=dir]').forEach(r=>{
   r.addEventListener('change', e=>{
     S.dir = e.target.value;
-    S.flight = null; stopAnim(); updateReadouts(); draw();
+    S.flight = null; S.info = null; stopAnim(); updateReadouts(); draw();
   });
 });
 document.getElementById('showG').addEventListener('change', e=>{
@@ -753,9 +918,15 @@ function tick(){
 
 /* ---------- click to show, marker follows the mouse, click again to hide ---------- */
 document.getElementById('phiWrap').addEventListener('click', e=>{
-  if(S.step >= 4){ S.pin = null; draw(); return; }
-  if(S.pin){ S.pin = null; draw(); return; }
   const r = phiCv.getBoundingClientRect();
+  if(S.step >= 4){
+    /* hit-test the dotted "?" labels */
+    const cx = e.clientX - r.left, cy = e.clientY - r.top;
+    const hit = S.hotspots.find(h => cx >= h.x && cx <= h.x + h.w && cy >= h.y && cy <= h.y + h.h);
+    S.info = hit ? (S.info === hit.id ? null : hit.id) : null;
+    S.pin = null; draw(); return;
+  }
+  if(S.pin){ S.pin = null; draw(); return; }
   const x = invx(e.clientX - r.left);
   if(x >= xSurfA() && x <= xSurfB()) S.pin = {x};
   draw();
