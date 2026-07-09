@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Car on a Banked Track — Horizontal Circular Motion</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#11161d; --panel2:#161d26; --line:#232c37;
+    --text:#dbe4ee; --muted:#8fa1b3; --gold:#f5c542; --cyan:#38cfe0;
+    --green:#4ade80; --red:#ff6b6b; --orange:#fb923c; --violet:#c084fc;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  header{
+    display:flex; align-items:baseline; gap:12px; padding:10px 16px;
+    background:var(--panel); border-bottom:1px solid var(--line); flex:0 0 auto;
+  }
+  header h1{font-size:17px; font-weight:600; letter-spacing:.3px;}
+  header span{font-size:13px; color:var(--muted);}
+  #main{flex:1; display:flex; min-height:0;}
+  #view{flex:1; position:relative; min-width:0;}
+  #scene{display:block; position:absolute; inset:0; cursor:grab;}
+  #tip{
+    position:absolute; pointer-events:none; display:none; z-index:6;
+    background:rgba(17,22,29,.97); border:1px solid var(--line); border-radius:8px;
+    padding:10px 13px; font-size:14px; max-width:360px; line-height:1.55;
+    box-shadow:0 4px 14px rgba(0,0,0,.55);
+  }
+  #tip .ln{font-variant-numeric:tabular-nums;}
+  #tip .dim{color:var(--muted); font-size:12.5px; margin-top:4px;}
+  #hint{
+    position:absolute; right:12px; bottom:10px; font-size:13px; color:#f0d78a;
+    background:#1a2029; padding:6px 12px; border-radius:7px;
+    border:1px solid var(--gold); pointer-events:none; z-index:4;
+    animation:hintPulse 2.2s ease-in-out infinite;
+  }
+  @keyframes hintPulse{
+    0%,100%{box-shadow:0 0 3px rgba(245,197,66,.2);}
+    50%{box-shadow:0 0 14px rgba(245,197,66,.55);}
+  }
+  #viewBtns{position:absolute; left:12px; top:10px; z-index:5; display:flex; gap:6px;}
+  #zoomBtns{position:absolute; left:12px; top:48px; z-index:5; display:flex; gap:6px;}
+  .vbtn{
+    background:rgba(17,22,29,.9); color:var(--text); border:1px solid var(--line);
+    border-radius:6px; padding:6px 11px; font-size:13px; cursor:pointer;
+  }
+  .vbtn:hover{border-color:var(--gold); color:var(--gold);}
+  .vbtn.on{border-color:var(--gold); color:var(--gold); background:#1d2129;}
+  .vbtn.zoom{width:34px; font-weight:700; font-size:15px; padding:4px 0;}
+  #panel{
+    flex:0 0 424px; background:var(--panel); border-left:1px solid var(--line);
+    overflow-y:auto; padding:14px 16px 20px; font-size:14px;
+  }
+  #panel h2{
+    font-size:13px; text-transform:uppercase; letter-spacing:1.4px; color:var(--text);
+    margin:24px 0 10px; padding-bottom:6px; border-bottom:1px solid #3d4c5c;
+  }
+  #panel h2:first-child{margin-top:2px;}
+  .steps{display:flex; gap:5px; margin-bottom:9px;}
+  .step{
+    flex:1; text-align:center; padding:7px 2px 6px; border:1px solid var(--line);
+    border-radius:7px; cursor:pointer; background:var(--panel2); user-select:none;
+  }
+  .step .n{font-size:15px; font-weight:700; color:var(--muted);}
+  .step .t{font-size:10.5px; color:var(--muted); margin-top:1px; letter-spacing:.2px;}
+  .step.on{border-color:var(--gold); background:#1d2129;}
+  .step.on .n,.step.on .t{color:var(--gold);}
+  #caption{
+    background:var(--panel2); border-radius:8px; padding:9px 11px 9px 13px; line-height:1.5;
+    font-size:13.5px; min-height:64px; border-left:3px solid var(--gold);
+  }
+  #caption .chip{
+    display:inline-block; border:1px dashed var(--muted); border-radius:10px;
+    padding:0 8px; font-size:12px; color:var(--muted); cursor:help; margin-left:2px;
+  }
+  #caption .chip:hover{color:var(--gold); border-color:var(--gold);}
+  .row{display:flex; align-items:center; gap:8px; margin:7px 0;}
+  .row label{flex:0 0 auto;}
+  .row .val{flex:0 0 62px; text-align:right; font-variant-numeric:tabular-nums; color:var(--gold);}
+  input[type=range]{
+    flex:1; -webkit-appearance:none; height:4px; border-radius:2px; background:#2a3542; outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--gold); cursor:pointer; border:2px solid #0b0f14;
+  }
+  input[type=number]{
+    width:64px; background:var(--panel2); color:var(--gold); border:1px solid var(--line);
+    border-radius:5px; padding:4px 6px; font-size:13.5px; text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  input[type=number]:focus{outline:none; border-color:var(--gold);}
+  input[type=radio],input[type=checkbox]{accent-color:var(--gold); width:14px; height:14px; cursor:pointer;}
+  .radios{display:flex; flex-direction:column; gap:6px; margin:6px 0;}
+  .radios label{display:flex; align-items:center; gap:7px; cursor:pointer; line-height:1.3;}
+  .checks label{display:flex; align-items:center; gap:7px; cursor:pointer; margin:6px 0;}
+  button{
+    background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:6px; padding:7px 11px; font-size:13.5px; cursor:pointer;
+  }
+  button:hover{border-color:var(--gold); color:var(--gold);}
+  button.primary{border-color:var(--green); color:var(--green); font-weight:600;}
+  button.primary:hover{background:#15251b;}
+  button.tsc{padding:5px 9px;}
+  button.tsc.on{border-color:var(--gold); color:var(--gold);}
+  .btns{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0;}
+  #live{
+    background:var(--panel2); border-radius:8px; padding:9px 11px 9px 13px; margin:10px 0 0;
+    border-left:3px solid #8fa1b3; font-size:13.5px; line-height:1.7;
+    font-variant-numeric:tabular-nums;
+  }
+  .mstep{
+    margin:0; padding:7px 0; line-height:1.55;
+    border-bottom:1px dashed #232c37;
+  }
+  .mstep:last-child{border-bottom:none;}
+  .mnum{
+    display:inline-block; width:17px; height:17px; border-radius:50%;
+    background:#2a3542; color:var(--gold); font-size:11px; text-align:center;
+    line-height:17px; font-weight:700; margin-right:5px;
+  }
+  .cN{color:var(--violet);} .cW{color:#cfd6de;} .cf{color:var(--orange);}
+  .cFc{color:var(--gold);} .cv{color:var(--green);} .dim{color:var(--muted); font-size:12.5px;}
+  .ok{color:var(--green);} .bad{color:var(--red);}
+</style>
+</head>
+<body>
+<header>
+  <h1>Car on a Banked Track</h1>
+  <span>horizontal circular motion — why friction flips direction with speed &nbsp;·&nbsp; v₀ = √(gr tanθ)</span>
+</header>
+
+<div id="main">
+  <div id="view">
+    <canvas id="scene"></canvas>
+    <div id="viewBtns">
+      <button class="vbtn on" id="vb3d">3D view</button>
+      <button class="vbtn" id="vbTop">Top view (plan)</button>
+      <button class="vbtn" id="vbEdge">Edge-on</button>
+    </div>
+    <div id="zoomBtns">
+      <button class="vbtn zoom" id="zin">+</button>
+      <button class="vbtn zoom" id="zout">−</button>
+    </div>
+    <div id="tip"></div>
+    <div id="hint">drag to rotate · scroll to zoom · click a dotted <b>?</b> label for the physics</div>
+  </div>
+
+  <div id="panel">
+    <h2>Learning steps</h2>
+    <div class="steps" id="steps"></div>
+    <div id="caption"></div>
+
+    <h2>Speed &amp; track</h2>
+    <div class="row">
+      <label>speed v</label>
+      <input type="range" id="v" min="0" max="40" step="0.1" value="11.7">
+      <input type="number" id="vNum" min="0" max="40" step="0.1" value="11.7"><span class="dim">m/s</span>
+    </div>
+    <div class="row">
+      <label>bank angle θ</label>
+      <input type="range" id="th" min="5" max="45" step="0.5" value="25">
+      <input type="number" id="thNum" min="5" max="45" step="0.5" value="25"><span class="dim">°</span>
+    </div>
+    <div class="row"><label>radius r</label><input type="range" id="r" min="15" max="80" step="1" value="30"><div class="val" id="rv"></div></div>
+    <div class="row"><label>mass m</label><input type="range" id="m" min="500" max="2000" step="50" value="1000"><div class="val" id="mv"></div></div>
+    <div class="btns">
+      <button class="primary" id="setV0">set v = v₀ (no friction needed)</button>
+    </div>
+
+    <h2>Tyres — friction model</h2>
+    <div class="radios">
+      <label><input type="radio" name="fm" value="ideal" checked> ideal grip — friction as large as needed <span class="dim">(A-Level default)</span></label>
+      <label><input type="radio" name="fm" value="mu"> real tyres — limited by μ<sub>s</sub>N</label>
+    </div>
+    <div class="row" id="muRow" style="display:none">
+      <label>μ<sub>s</sub></label><input type="range" id="mu" min="0.05" max="1" step="0.05" value="0.3"><div class="val" id="muv"></div>
+    </div>
+
+    <h2>The mathematics</h2>
+    <div id="live"></div>
+
+    <h2>Display &amp; animation</h2>
+    <div class="checks">
+      <label><input type="checkbox" id="cComp" checked> show N and f components (dashed)</label>
+      <label><input type="checkbox" id="cFcA" checked> show resultant F<sub>c</sub> arrow (gold)</label>
+      <label><input type="checkbox" id="cVel" checked> show velocity arrow</label>
+      <label><input type="checkbox" id="cTrail" checked> equal-time trail dots</label>
+    </div>
+    <div class="btns">
+      <button id="pauseBtn">⏸ pause</button>
+      <button id="resetCarBtn">↺ reset car</button>
+      <button class="tsc on" data-ts="1">×1</button>
+      <button class="tsc" data-ts="2">×2</button>
+      <button class="tsc" data-ts="4">×4</button>
+    </div>
+    <div class="dim">g = 9.81 m s⁻² · forces in kN · drag the 3D view; in Top view the motion is a plain circle traced at constant speed.</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= state ================= */
+const G = 9.81;
+const S = {
+  step: 1,
+  v: 11.7, th: 25, r: 30, m: 1000,
+  mu: 0.30, muMode: false,
+  phi: 0,               // angular position of car
+  drift: 0,             // slide distance along slope when skidding (m)
+  crash: null,          // off-track crash state {mode, p, vel, psi, spin, stopped}
+  paused: false, tScale: 1,
+  showComp: true, showFc: true, showVel: true, showTrail: true,
+  info: null,           // open "?" popup id
+  hotspots: [],
+  trail: [], trailT: 0
+};
+const cam = { yaw: 0.85, pitch: 0.52, dist: 88, tw: null };
+const TRACKW = 10;      // track width measured along the slope (m)
+
+/* ================= derived physics ================= */
+function derived(){
+  const th = S.th * Math.PI/180;
+  const sin = Math.sin(th), cos = Math.cos(th), tan = Math.tan(th);
+  const v0 = Math.sqrt(G * S.r * tan);
+  const Fc = S.m * S.v*S.v / S.r;
+  const N  = S.m * (G*cos + S.v*S.v/S.r * sin);
+  const f  = S.m * (G*sin - S.v*S.v/S.r * cos);   // signed: + means UP the slope
+  const fmax = S.mu * N;
+  const skid = S.muMode && Math.abs(f) > fmax * 1.0001;
+  const vmax2 = (1 - S.mu*tan) > 1e-6 ? G*S.r*(tan + S.mu)/(1 - S.mu*tan) : Infinity;
+  const vmin2 = G*S.r*(tan - S.mu)/(1 + S.mu*tan);
+  const vmax = Math.sqrt(Math.max(0, vmax2));
+  const vmin = vmin2 > 0 ? Math.sqrt(vmin2) : 0;
+  let cs;   // case
+  if(Math.abs(f) < 0.01 * S.m * G) cs = 'ideal';
+  else cs = f > 0 ? 'low' : 'high';
+  // friction actually shown (capped when skidding)
+  const fShow = skid ? Math.sign(f) * fmax : f;
+  return {th, sin, cos, tan, v0, Fc, N, f, fShow, fmax, skid, vmin, vmax, cs};
+}
+
+/* ================= formatting ================= */
+const f3 = v => {
+  if(!isFinite(v)) return '∞';
+  const a = Math.abs(v);
+  if(a < 1e-12) return '0';
+  return v.toPrecision(a >= 100 ? 4 : 3).replace(/\.?0+$/,'').replace(/\.$/,'');
+};
+const kN = v => f3(v/1000) + ' kN';
+
+/* ================= canvas ================= */
+const cv = document.getElementById('scene');
+const ctx = cv.getContext('2d');
+const tip = document.getElementById('tip');
+let PW = 0, PH = 0;
+function resize(){
+  const r = document.getElementById('view').getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.max(1, r.width*dpr); cv.height = Math.max(1, r.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  PW = r.width; PH = r.height;
+}
+new ResizeObserver(resize).observe(document.getElementById('view'));
+
+/* ================= 3D projection (y up) ================= */
+let EYE=[0,0,0], AX=[1,0,0], AY=[0,1,0], AZ=[0,0,1], TGT=[0,0,0], FOC=800;
+function updateCamBasis(){
+  const D = derived();
+  TGT = [0, (TRACKW/2)*D.sin*0.9, 0];
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const sy = Math.sin(cam.yaw),  cy = Math.cos(cam.yaw);
+  EYE = [TGT[0] + cam.dist*cp*sy, TGT[1] + cam.dist*sp, TGT[2] + cam.dist*cp*cy];
+  let z = [EYE[0]-TGT[0], EYE[1]-TGT[1], EYE[2]-TGT[2]];
+  const zl = Math.hypot(...z); z = z.map(c=>c/zl);
+  let x = [z[2], 0, -z[0]];                       // cross(up, z)
+  const xl = Math.hypot(...x) || 1; x = x.map(c=>c/xl);
+  const y = [z[1]*x[2]-z[2]*x[1], z[2]*x[0]-z[0]*x[2], z[0]*x[1]-z[1]*x[0]];  // z × x
+  AX=x; AY=y; AZ=z;
+  FOC = Math.min(PW, PH) * 1.18;
+}
+function proj(p){
+  const q = [p[0]-EYE[0], p[1]-EYE[1], p[2]-EYE[2]];
+  const xc = q[0]*AX[0]+q[1]*AX[1]+q[2]*AX[2];
+  const yc = q[0]*AY[0]+q[1]*AY[1]+q[2]*AY[2];
+  const zc = q[0]*AZ[0]+q[1]*AZ[1]+q[2]*AZ[2];
+  const d = -zc;
+  if(d < 1) return null;
+  return [PW/2 + FOC*xc/d, PH/2 - FOC*yc/d, d];
+}
+
+/* ================= 2D helpers ================= */
+function label(t, X, Y, color, align, size, bold){
+  ctx.save(); ctx.fillStyle = color || '#dbe4ee';
+  ctx.font = (bold?'600 ':'') + (size||14) + 'px "Segoe UI",sans-serif';
+  ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+  ctx.fillText(t, X, Y); ctx.restore();
+}
+function arrow2D(x1,y1,x2,y2,color,width,dash){
+  const dx = x2-x1, dy = y2-y1, L = Math.hypot(dx,dy);
+  if(L < 3) return;
+  const ux = dx/L, uy = dy/L;
+  const hs = Math.max(7, Math.min(13, L*0.22));
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = width || 3; ctx.setLineDash(dash || []);
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 3;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2-ux*hs*0.8, y2-uy*hs*0.8); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-ux*hs-uy*hs*0.42, y2-uy*hs+ux*hs*0.42);
+  ctx.lineTo(x2-ux*hs+uy*hs*0.42, y2-uy*hs-ux*hs*0.42);
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+/* clickable dotted label with "?" badge — same interaction as two-planet applet */
+function chipLabel(id, lines, X, Y, color, align, size){
+  size = size || 13;
+  if(typeof lines === 'string') lines = [lines];
+  const lh = size + 5;
+  ctx.save(); ctx.font = '600 ' + size + 'px "Segoe UI",sans-serif';
+  let w = 0; for(const t of lines) w = Math.max(w, ctx.measureText(t).width);
+  ctx.restore();
+  const H = lines.length * lh;
+  const x0 = align==='right' ? X - w : (align==='center' ? X - w/2 : X);
+  const yTop = Y - H/2;
+  lines.forEach((t,i)=> label(t, x0, yTop + lh*(i+0.5), color, 'left', size, true));
+  const r = {x:x0-7, y:yTop-4, w:w+14, h:H+8};
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.restore();
+  const bx = r.x + r.w, by = r.y;
+  ctx.save(); ctx.fillStyle = '#11161d'; ctx.strokeStyle = color; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(bx, by, 8, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore();
+  label('?', bx, by+0.5, color, 'center', 11.5, true);
+  S.hotspots.push({id, x:r.x-4, y:r.y-13, w:r.w+18, h:r.h+17});
+}
+function showTip(X, Y, html){
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  tip.style.left = '0px'; tip.style.top = '0px';
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let L = X + 18, T = Y - 10;
+  if(L + tw > PW - 8) L = X - tw - 18;
+  if(T + th > PH - 8) T = PH - th - 8;
+  if(T < 4) T = 4;
+  if(L < 4) L = 4;
+  tip.style.left = L+'px'; tip.style.top = T+'px';
+}
+
+/* ================= scene geometry ================= */
+const COL = {W:'#cfd6de', N:'#c084fc', f:'#fb923c', Fc:'#f5c542', v:'#4ade80'};
+function radial(phi){ return [Math.cos(phi), 0, Math.sin(phi)]; }
+function trackPoint(phi, rho, D){   // rho: distance along slope from inner edge... here from centreline
+  const rr = S.r + rho*D.cos;
+  return [rr*Math.cos(phi), (rho + TRACKW/2)*D.sin, rr*Math.sin(phi)];
+}
+function carFrame(D){
+  if(S.crash){
+    const C = S.crash;
+    const t = [Math.cos(C.psi), 0, Math.sin(C.psi)];
+    const u = [t[2], 0, -t[0]];
+    return {P: C.p, t, u, n: [0,1,0], rd: [1,0,0]};
+  }
+  const phi = S.phi;
+  const rd = radial(phi);
+  const t  = [-Math.sin(phi), 0, Math.cos(phi)];                       // direction of motion
+  const u  = [D.cos*rd[0], D.sin, D.cos*rd[2]];                        // up-slope (outward+up)
+  const n  = [-D.sin*rd[0], D.cos, -D.sin*rd[2]];                      // surface normal
+  const P  = trackPoint(phi, S.drift, D);                              // contact point on centreline(+drift)
+  return {P, t, u, n, rd};
+}
+const add = (p, d, s) => [p[0]+d[0]*s, p[1]+d[1]*s, p[2]+d[2]*s];
+
+function drawScene(D){
+  ctx.clearRect(0,0,PW,PH);
+  S.hotspots.length = 0;
+  updateCamBasis();
+
+  /* ---- ground disk + subtle grid ---- */
+  const Rg = S.r + (TRACKW/2)*D.cos + 16;
+  const gpts = [];
+  for(let i=0;i<=72;i++){
+    const a = i/72*2*Math.PI;
+    const p = proj([Rg*Math.cos(a), 0, Rg*Math.sin(a)]);
+    if(p) gpts.push(p);
+  }
+  if(gpts.length > 40){
+    ctx.save(); ctx.fillStyle = '#0e141b';
+    ctx.beginPath(); gpts.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#1a222c'; ctx.lineWidth = 1;
+    for(let k=0;k<12;k++){
+      const a = k/12*2*Math.PI;
+      const p1 = proj([0,0,0]), p2 = proj([Rg*Math.cos(a), 0, Rg*Math.sin(a)]);
+      if(p1 && p2){ ctx.beginPath(); ctx.moveTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.stroke(); }
+    }
+    ctx.restore();
+  }
+
+  /* ---- collect quads: banked band + kerbs + outer wall + car ---- */
+  const quads = [];
+  const NSEG = 96;
+  const pushQuad = (pts3, fill) => {
+    let d = 0; const pts = [];
+    for(const p of pts3){
+      const q = proj(p); if(!q) return;
+      d += q[2]; pts.push(q);
+    }
+    quads.push({pts, d:d/4, fill});
+  };
+  const KW = 0.9;                                   // kerb width (along slope)
+  for(let i=0;i<NSEG;i++){
+    const a0 = i/NSEG*2*Math.PI, a1 = (i+1)/NSEG*2*Math.PI;
+    const asphalt = (i%12 < 6) ? '#39424e' : '#343c47';
+    pushQuad([trackPoint(a0,-TRACKW/2+KW,D), trackPoint(a1,-TRACKW/2+KW,D),
+              trackPoint(a1, TRACKW/2-KW,D), trackPoint(a0, TRACKW/2-KW,D)], asphalt);
+    const kerb = (i%8 < 4) ? '#a33a3a' : '#c9ccd2';
+    pushQuad([trackPoint(a0,-TRACKW/2,D), trackPoint(a1,-TRACKW/2,D),
+              trackPoint(a1,-TRACKW/2+KW,D), trackPoint(a0,-TRACKW/2+KW,D)], kerb);
+    pushQuad([trackPoint(a0, TRACKW/2-KW,D), trackPoint(a1, TRACKW/2-KW,D),
+              trackPoint(a1, TRACKW/2,D), trackPoint(a0, TRACKW/2,D)], kerb);
+    /* outer supporting wall down to the ground */
+    const o0 = trackPoint(a0, TRACKW/2, D), o1 = trackPoint(a1, TRACKW/2, D);
+    pushQuad([o0, o1, [o1[0],0,o1[2]], [o0[0],0,o0[2]]], '#20272f');
+  }
+
+  /* ---- car (two boxes) ---- */
+  const F = carFrame(D);
+  const box = (LL, WW, c0, c1, cols) => {
+    const corners = [];
+    for(const c of [c0, c1]) for(const b of [-WW/2, WW/2]) for(const a of [-LL/2, LL/2]){
+      let p = add(F.P, F.t, a); p = add(p, F.u, b); p = add(p, F.n, c);
+      corners.push(p);
+    }
+    // idx: c(4) b(2) a(1)
+    const faces = [
+      [0,1,3,2, cols[0]],  // bottom
+      [4,5,7,6, cols[1]],  // top
+      [0,1,5,4, cols[2]],  // inner side (b=-)
+      [2,3,7,6, cols[2]],  // outer side
+      [0,2,6,4, cols[3]],  // rear (a=-)
+      [1,3,7,5, cols[3]]   // front
+    ];
+    for(const fc of faces) pushQuad([corners[fc[0]],corners[fc[1]],corners[fc[2]],corners[fc[3]]], fc[4]);
+  };
+  box(4.4, 2.0, 0.35, 1.55, ['#16303c','#2d7fa8','#25607e','#1d4a61']);   // body
+  box(2.3, 1.8, 1.55, 2.35, ['#2d7fa8','#3f9cc7','#9fd3e8','#2b6d8f']);   // cabin
+
+  quads.sort((q1,q2)=> q2.d - q1.d);
+  ctx.save();
+  for(const q of quads){
+    ctx.fillStyle = q.fill; ctx.strokeStyle = q.fill; ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    q.pts.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+
+  /* ---- path circle (centreline) + centre + radius line ---- */
+  const hc = (TRACKW/2)*D.sin;
+  ctx.save(); ctx.strokeStyle = 'rgba(245,197,66,.4)'; ctx.lineWidth = 1.4; ctx.setLineDash([6,6]);
+  ctx.beginPath();
+  let started = false;
+  for(let i=0;i<=120;i++){
+    const a = i/120*2*Math.PI;
+    const p = proj([S.r*Math.cos(a), hc, S.r*Math.sin(a)]);
+    if(!p){ started = false; continue; }
+    if(!started){ ctx.moveTo(p[0],p[1]); started = true; } else ctx.lineTo(p[0],p[1]);
+  }
+  ctx.stroke(); ctx.restore();
+
+  const pc = proj([0, hc, 0]);
+  const pCar = proj(F.P);
+  if(pc){
+    ctx.save(); ctx.fillStyle = '#8fa1b3';
+    ctx.beginPath(); ctx.arc(pc[0], pc[1], 3.5, 0, 7); ctx.fill(); ctx.restore();
+    label('centre', pc[0], pc[1]+14, '#8fa1b3', 'center', 12);
+    if(pCar && !S.crash){
+      ctx.save(); ctx.strokeStyle = 'rgba(143,161,179,.55)'; ctx.lineWidth = 1.2; ctx.setLineDash([4,5]);
+      ctx.beginPath(); ctx.moveTo(pc[0],pc[1]); ctx.lineTo(pCar[0],pCar[1]); ctx.stroke(); ctx.restore();
+      label('r', (pc[0]+pCar[0])/2, (pc[1]+pCar[1])/2 - 10, '#8fa1b3', 'center', 13, true);
+    }
+  }
+
+  /* ---- equal-time trail dots ---- */
+  if(S.showTrail){
+    ctx.save();
+    S.trail.forEach((a, i)=>{
+      const p = proj([S.r*Math.cos(a), hc, S.r*Math.sin(a)]);
+      if(!p) return;
+      const al = (i+1)/S.trail.length * 0.7;
+      ctx.fillStyle = 'rgba(74,222,128,' + al + ')';
+      ctx.beginPath(); ctx.arc(p[0], p[1], 3, 0, 7); ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  /* ---- force arrows (always on top: this is the free-body picture) ---- */
+  const C = add(F.P, F.n, 1.3);                     // arrow origin: middle of car
+  const pC = proj(C);
+  if(pC && !S.crash){
+    const scl = 11 / (S.m * G);                     // metres per newton: weight arrow = 11 m
+    const arr3 = (dir, len, color, width, dash) => {
+      const tipP = proj(add(C, dir, len));
+      if(!tipP) return null;
+      arrow2D(pC[0], pC[1], tipP[0], tipP[1], color, width, dash);
+      const dx = tipP[0]-pC[0], dy = tipP[1]-pC[1], L = Math.hypot(dx,dy)||1;
+      return {x:tipP[0]+dx/L*16, y:tipP[1]+dy/L*16, ax: dx>=0?'left':'right'};
+    };
+    /* velocity (thin, drawn first so forces sit on top) */
+    if(S.showVel){
+      const t = arr3(F.t, Math.max(4, Math.min(16, S.v*0.55)), COL.v, 2.4);
+      if(t) chipLabel('v', 'v', t.x, t.y, COL.v, t.ax, 13.5);
+    }
+    /* resultant Fc */
+    if(S.showFc && S.v > 0.2 && !D.skid){
+      const dirIn = [-F.rd[0], 0, -F.rd[2]];
+      const t = arr3(dirIn, D.Fc*scl, COL.Fc, 3, [7,4]);
+      if(t) chipLabel('Fc', ['resultant', '= mv²/r'], t.x, t.y, COL.Fc, t.ax, 12.5);
+    }
+    /* weight */
+    { const t = arr3([0,-1,0], S.m*G*scl, COL.W, 3.2);
+      if(t) chipLabel('W', 'W = mg', t.x, t.y, COL.W, t.ax, 13.5); }
+    /* normal */
+    { const t = arr3(F.n, D.N*scl, COL.N, 3.2);
+      if(t) chipLabel('N', 'N', t.x, t.y, COL.N, t.ax, 13.5); }
+    /* friction */
+    if(Math.abs(D.fShow) > 0.01 * S.m * G){
+      const dir = D.fShow > 0 ? F.u : F.u.map(c=>-c);
+      const t = arr3(dir, Math.abs(D.fShow)*scl, COL.f, 3.2);
+      if(t) chipLabel('f', D.fShow > 0 ? 'f  (up the slope)' : 'f  (down the slope)', t.x, t.y, COL.f, t.ax, 13);
+    }else{
+      chipLabel('f', 'f ≈ 0', pC[0]+26, pC[1]-26, COL.f, 'left', 13);
+    }
+    /* skid warning */
+    if(D.skid){
+      const pulse = 0.6 + 0.4*Math.sin(performance.now()/180);
+      label(D.f < 0 ? 'SKIDS — slides up / off the bank!' : 'SKIDS — slides down the bank!',
+            pC[0], pC[1]-58, 'rgba(255,107,107,'+pulse+')', 'center', 15, true);
+      chipLabel('skid', 'why does it skid?', pC[0], pC[1]-36, '#ff6b6b', 'center', 12.5);
+    }
+  }
+  /* crash: no more circular motion — just the wreck and the reason */
+  if(pC && S.crash){
+    const pulse = 0.6 + 0.4*Math.sin(performance.now()/180);
+    const t1 = S.crash.stopped ? 'CRASHED!'
+             : (S.crash.mode === 'high' ? 'SKIDS UP & OFF THE TRACK!' : 'SLIDES DOWN OFF THE BANK!');
+    label(t1, pC[0], pC[1]-48, 'rgba(255,107,107,'+pulse+')', 'center', 16, true);
+    if(S.crash.stopped)
+      label('change v or press ↺ reset car to try again', pC[0], pC[1]-28, '#ff9b9b', 'center', 12.5);
+    chipLabel('skid', 'why did it crash?', pC[0], pC[1]+36, '#ff6b6b', 'center', 12.5);
+  }
+
+  drawFBD(D);
+  drawInfo(D);
+}
+
+/* ================= free-body diagram inset (cross-section) ================= */
+function drawFBD(D){
+  const Wp = 274, Hp = 268;
+  const x0 = 14, y0 = PH - Hp - 12;
+  if(PH < 420 || PW < 620) return;
+  ctx.save();
+  ctx.fillStyle = 'rgba(17,22,29,.94)'; ctx.strokeStyle = '#232c37'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(x0, y0, Wp, Hp, 9); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  label('cross-section — free-body diagram', x0+Wp/2, y0+16, '#8fa1b3', 'center', 12.5);
+
+  const O = [x0+168, y0+168];                       // car contact point
+  const e = [D.cos, -D.sin];                        // up-slope on screen (right & up)
+  const n = [-D.sin, -D.cos];                       // surface normal on screen
+  /* "to centre" arrow */
+  arrow2D(x0+96, y0+38, x0+22, y0+38, '#8fa1b3', 1.6);
+  label('to centre', x0+59, y0+50, '#8fa1b3', 'center', 11.5);
+  /* slope line + ground */
+  ctx.save(); ctx.strokeStyle = '#556677'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(O[0]-e[0]*118, O[1]-e[1]*118); ctx.lineTo(O[0]+e[0]*86, O[1]+e[1]*86); ctx.stroke();
+  ctx.strokeStyle = '#38424e'; ctx.lineWidth = 1.2; ctx.setLineDash([4,4]);
+  const gy = O[1]-e[1]*118 + 0.5;
+  ctx.beginPath(); ctx.moveTo(O[0]-e[0]*118-6, gy); ctx.lineTo(O[0]+96, gy); ctx.stroke();
+  ctx.restore();
+  /* θ arc */
+  ctx.save(); ctx.strokeStyle = '#f5c542'; ctx.lineWidth = 1.3;
+  const bx = O[0]-e[0]*118, by = gy;
+  ctx.beginPath(); ctx.arc(bx, by, 34, 0, -D.th, true); ctx.stroke(); ctx.restore();
+  label('θ', bx+45, by-13, '#f5c542', 'center', 13, true);
+  /* car block */
+  ctx.save(); ctx.translate(O[0], O[1]); ctx.rotate(-D.th);
+  ctx.fillStyle = '#2d7fa8';
+  ctx.beginPath(); ctx.roundRect(-17, -15, 34, 15, 3); ctx.fill();
+  ctx.restore();
+  const Cf = [O[0]+n[0]*8, O[1]+n[1]*8];
+
+  const k = 62 / (S.m*G);                           // px per newton
+  const LN = D.N*k, Lf = Math.abs(D.fShow)*k, LW = S.m*G*k, LFc = D.Fc*k;
+  /* components first (dashed, thin) */
+  if(S.showComp){
+    ctx.save(); ctx.globalAlpha = .85;
+    const comp = (vx, vy, color) => arrow2D(Cf[0], Cf[1], Cf[0]+vx, Cf[1]+vy, color, 1.4, [4,3]);
+    comp(n[0]*LN, 0, COL.N);   comp(0, n[1]*LN, COL.N);
+    if(Lf > 2){
+      const sgn = D.fShow > 0 ? 1 : -1;
+      comp(e[0]*Lf*sgn, 0, COL.f); comp(0, e[1]*Lf*sgn, COL.f);
+    }
+    /* projection guides */
+    ctx.strokeStyle = 'rgba(192,132,252,.35)'; ctx.lineWidth = 1; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(Cf[0]+n[0]*LN, Cf[1]+n[1]*LN); ctx.lineTo(Cf[0]+n[0]*LN, Cf[1]); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(Cf[0]+n[0]*LN, Cf[1]+n[1]*LN); ctx.lineTo(Cf[0], Cf[1]+n[1]*LN); ctx.stroke();
+    ctx.restore();
+    label('N sinθ', Cf[0]+n[0]*LN/2, Cf[1]+11, COL.N, 'center', 10.5);
+    label('N cosθ', Cf[0]+13, Cf[1]+n[1]*LN/2, COL.N, 'left', 10.5);
+  }
+  /* main arrows + chips */
+  if(S.showFc && S.v > 0.2 && !D.skid){
+    arrow2D(Cf[0], Cf[1], Cf[0]-LFc, Cf[1], COL.Fc, 2.6, [6,4]);
+    S.hotspots.push({id:'Fc', x:Cf[0]-LFc-14, y:Cf[1]-12, w:26, h:24});
+  }
+  arrow2D(Cf[0], Cf[1], Cf[0], Cf[1]+LW, COL.W, 3);
+  chipLabel('W', 'W', Cf[0]+3, Cf[1]+LW+13, COL.W, 'left', 13);
+  arrow2D(Cf[0], Cf[1], Cf[0]+n[0]*LN, Cf[1]+n[1]*LN, COL.N, 3);
+  chipLabel('N', 'N', Cf[0]+n[0]*LN-6, Cf[1]+n[1]*LN-14, COL.N, 'right', 13);
+  if(Lf > 2){
+    const sgn = D.fShow > 0 ? 1 : -1;
+    arrow2D(Cf[0], Cf[1], Cf[0]+e[0]*Lf*sgn, Cf[1]+e[1]*Lf*sgn, COL.f, 3);
+    chipLabel('f', 'f', Cf[0]+e[0]*Lf*sgn+(sgn>0?14:-14), Cf[1]+e[1]*Lf*sgn+(sgn>0?-6:12), COL.f, 'center', 13);
+  }else{
+    chipLabel('f', 'f ≈ 0', O[0]+e[0]*46, O[1]+e[1]*46-14, COL.f, 'center', 11.5);
+  }
+}
+
+/* ================= "?" popup explanations ================= */
+function infoHTML(id, D){
+  const mg = S.m*G;
+  const need = D.Fc, tanTerm = mg*D.tan;
+  if(id === 'W') return `
+    <div class="ln"><b style="color:${COL.W}">Weight W = mg</b> = ${f3(S.m)} × 9.81 = <b>${kN(mg)}</b></div>
+    <div class="ln">Acts <b>vertically downwards</b> — from the centre of gravity.</div>
+    <div class="dim">It is the same whether the car is parked or cornering; speed never changes W.</div>`;
+  if(id === 'N') return `
+    <div class="ln"><b style="color:${COL.N}">Normal contact force N</b> — always ⊥ to the road surface.</div>
+    <div class="ln">Solving the two equations of motion:</div>
+    <div class="ln" style="padding-left:14px">N = m(g cosθ + <sup>v²</sup>⁄<sub>r</sub> sinθ) = <b>${kN(D.N)}</b></div>
+    <div class="ln" style="margin-top:4px">⚠ It is <b>not</b> mg cosθ (= ${kN(mg*D.cos)}) — that is a <i>parked</i> car.</div>
+    <div class="dim">While cornering, N must both help support the weight <i>and</i> supply a horizontal component N sinθ toward the centre — so the road pushes harder than on a stationary car.</div>`;
+  if(id === 'f'){
+    if(D.skid) return infoHTML('skid', D);
+    if(D.cs === 'ideal') return `
+      <div class="ln"><b style="color:${COL.f}">Friction f ≈ 0</b> — this is the design speed v₀ = √(gr tanθ) = ${f3(D.v0)} m/s.</div>
+      <div class="ln" style="padding-left:14px">N sinθ = ${kN(D.N*D.sin)} = mv²/r exactly.</div>
+      <div class="ln">The horizontal component of N alone provides the whole centripetal force.</div>
+      <div class="dim">No friction needed — the bend could be taken even on perfectly smooth ice, and the result is independent of mass m.</div>`;
+    if(D.cs === 'low') return `
+      <div class="ln"><b style="color:${COL.f}">Why does friction act UP the slope?</b> (v &lt; v₀)</div>
+      <div class="ln" style="padding-left:14px">• needed: mv²/r = <b>${kN(need)}</b></div>
+      <div class="ln" style="padding-left:14px">• frictionless banking would give ≈ mg tanθ = ${kN(tanTerm)} — <b>too much</b> inward force</div>
+      <div class="ln">At this low speed the car tends to slip <b>down</b> the slope → static friction opposes the tendency → acts <b>up the slope</b>.</div>
+      <div class="ln" style="margin-top:4px">Horizontally: N sinθ − f cosθ = mv²/r</div>
+      <div class="ln" style="padding-left:14px">f = m(g sinθ − <sup>v²</sup>⁄<sub>r</sub> cosθ) = <b>${kN(Math.abs(D.f))}</b> up the slope</div>
+      <div class="dim">Its horizontal component f cosθ points <i>away</i> from the centre, trimming N sinθ down to exactly mv²/r.</div>`;
+    return `
+      <div class="ln"><b style="color:${COL.f}">Why does friction act DOWN the slope?</b> (v &gt; v₀)</div>
+      <div class="ln" style="padding-left:14px">• needed: mv²/r = <b>${kN(need)}</b></div>
+      <div class="ln" style="padding-left:14px">• frictionless banking would give ≈ mg tanθ = ${kN(tanTerm)} — <b>not enough</b></div>
+      <div class="ln">At this high speed the car tends to slide <b>up / outwards</b> → static friction opposes the tendency → acts <b>down the slope</b>.</div>
+      <div class="ln" style="margin-top:4px">Horizontally: N sinθ + f cosθ = mv²/r</div>
+      <div class="ln" style="padding-left:14px">f = m(<sup>v²</sup>⁄<sub>r</sub> cosθ − g sinθ) = <b>${kN(Math.abs(D.f))}</b> down the slope</div>
+      <div class="dim">Now the horizontal component f cosθ points <i>toward</i> the centre, topping up N sinθ.</div>`;
+  }
+  if(id === 'Fc') return `
+    <div class="ln"><b style="color:${COL.Fc}">The forces do NOT balance.</b></div>
+    <div class="ln">The resultant of W, N and f is <b>horizontal</b>, pointing at the centre of the circle:</div>
+    <div class="ln" style="padding-left:14px">F<sub>c</sub> = mv²/r = <b>${kN(D.Fc)}</b>  → a = v²/r = ${f3(S.v*S.v/S.r)} m s⁻²</div>
+    <div class="dim">Speed is constant but the <i>direction</i> of velocity keeps changing, so the car is accelerating. Centripetal force is not an extra force — it is what the resultant must equal.</div>`;
+  if(id === 'v') return `
+    <div class="ln"><b style="color:${COL.v}">Velocity v</b> = ${f3(S.v)} m/s — tangent to the circle, constant magnitude.</div>
+    <div class="ln">Press <b>Top view</b>: the motion is a plain circle traced at a steady rate — uniform circular motion.</div>
+    <div class="dim">The green trail dots are laid at equal time intervals: equal spacing ⇔ constant speed.</div>`;
+  if(id === 'skid') return `
+    <div class="ln"><b style="color:#ff6b6b">Why does it skid?</b></div>
+    <div class="ln" style="padding-left:14px">friction required: |f| = ${kN(Math.abs(D.f))}</div>
+    <div class="ln" style="padding-left:14px">maximum available: μ<sub>s</sub>N = ${f3(S.mu)} × ${kN(D.N)} = <b>${kN(D.fmax)}</b></div>
+    <div class="ln">Required &gt; available → the tyres slip: the car ${D.f < 0 ? 'slides <b>up and off</b> the bank (too fast)' : 'slides <b>down</b> the bank (too slow)'}.</div>
+    <div class="ln" style="margin-top:4px">Safe range: <b>${f3(D.vmin)} ≤ v ≤ ${f3(D.vmax)} m/s</b></div>
+    <div class="dim">Drag v back inside the range to regain grip.</div>`;
+  return '';
+}
+const inFBD = h => h.y > PH - 300 && h.x < 300;
+function drawInfo(D){
+  if(!S.info){ tip.style.display = 'none'; return; }
+  const cands = S.hotspots.filter(h => h.id === S.info);
+  const hs = cands.find(h => inFBD(h) === !!S.infoFbd) || cands[0];
+  if(!hs){ S.info = null; tip.style.display = 'none'; return; }
+  const html = infoHTML(S.info, D);
+  if(!html){ tip.style.display = 'none'; return; }
+  if(S.infoFbd) showTip(302, Math.max(PH - 300, hs.y - 40), html);   // clear of the FBD inset
+  else showTip(hs.x + hs.w + 6, hs.y + hs.h/2, html);
+}
+
+/* ================= learning steps ================= */
+const STEPS = [
+  {t:'the setup', cap:`A car drives round a <b>horizontal circle</b> at constant speed on a track banked at θ.
+    Three forces act on it: weight <b style="color:#cfd6de">W</b>, normal contact force <b style="color:#c084fc">N</b>, and friction <b style="color:#fb923c">f</b>.
+    Drag to rotate, or press <b>Top view</b> — from above it is plain uniform circular motion. Click any dotted <b>?</b> label for the physics.`},
+  {t:'v just right', cap:`At the <b>design speed</b> v₀ = √(gr tanθ) <span class="chip" id="der">why?</span>,
+    the horizontal component of N alone provides the whole centripetal force: <b>N sinθ = mv²/r</b>.
+    <b style="color:#fb923c">No friction is needed</b> — this bend could be taken on ice, and v₀ is the same for any mass.`},
+  {t:'too slow', cap:`<b>v &lt; v₀</b>: banking alone would push the car inward too strongly — it tends to slip <b>down</b> the slope,
+    so static friction acts <b style="color:#fb923c">up the slope</b>.
+    Horizontally: <b>N sinθ − f cosθ = mv²/r</b> — the friction's horizontal component <i>cancels part of</i> N sinθ.`},
+  {t:'too fast', cap:`<b>v &gt; v₀</b>: N sinθ is no longer enough — the car tends to slide <b>up / outwards</b>,
+    so friction acts <b style="color:#fb923c">down the slope</b>.
+    Horizontally: <b>N sinθ + f cosθ = mv²/r</b> — now friction's horizontal component <i>adds to</i> the centripetal force.`},
+  {t:'grip limit', cap:`Real tyres: static friction cannot exceed <b>μ<sub>s</sub>N</b>. Circular motion at radius r is only possible for
+    <b>v<sub>min</sub> ≤ v ≤ v<sub>max</sub></b> — outside that range the car <b style="color:#ff6b6b">skids</b>.
+    The car is now above v<sub>max</sub>: watch it slide up the bank. Lower v back into the safe range to regain grip.`}
+];
+const stepsDiv = document.getElementById('steps');
+STEPS.forEach((st,i)=>{
+  const d = document.createElement('div');
+  d.className = 'step'; d.innerHTML = `<div class="n">${i+1}</div><div class="t">${st.t}</div>`;
+  d.onclick = ()=> setStep(i+1);
+  stepsDiv.appendChild(d);
+});
+function setStep(n){
+  S.step = n; S.info = null; resetCar();
+  document.querySelectorAll('.step').forEach((el,i)=> el.classList.toggle('on', i+1===n));
+  document.getElementById('caption').innerHTML = STEPS[n-1].cap;
+  const D0 = derived();
+  if(n === 1 || n === 2) setV(D0.v0);
+  if(n === 3) setV(0.55*D0.v0);
+  if(n === 4) setV(1.45*D0.v0);
+  if(n <= 4){ setFrictionModel(false); }
+  if(n === 5){
+    setFrictionModel(true);
+    const D1 = derived();
+    setV(Math.min(40, (isFinite(D1.vmax) ? D1.vmax : 30) + 2.5));
+  }
+  const der = document.getElementById('der');
+  if(der){
+    der.onmouseenter = ()=>{ const D = derived(); showTip(60, 60,
+      `<div class="ln"><b>Where does v₀ = √(gr tanθ) come from?</b></div>
+       <div class="ln" style="padding-left:14px">With f = 0, only W and N act:</div>
+       <div class="ln" style="padding-left:14px">vertical: N cosθ = mg</div>
+       <div class="ln" style="padding-left:14px">horizontal: N sinθ = mv₀²/r</div>
+       <div class="ln" style="padding-left:14px">divide → tanθ = v₀²/(gr) ⇒ <b>v₀ = √(gr tanθ)</b> = ${f3(D.v0)} m/s here</div>
+       <div class="dim">m cancels — the design speed is the same for a bicycle or a lorry.</div>`); };
+    der.onmouseleave = ()=>{ if(!S.info) tip.style.display = 'none'; };
+  }
+  updatePanel();
+}
+
+/* ================= panel & controls ================= */
+const $ = id => document.getElementById(id);
+function resetCar(){ S.crash = null; S.drift = 0; S.trail.length = 0; }
+function setV(v){
+  S.v = Math.round(Math.max(0, Math.min(40, v))*10)/10;
+  $('v').value = S.v; $('vNum').value = S.v;
+  resetCar();
+  updatePanel();
+}
+function setTh(t){
+  S.th = Math.max(5, Math.min(45, t));
+  $('th').value = S.th; $('thNum').value = S.th;
+  resetCar(); updatePanel();
+}
+function setFrictionModel(mu){
+  S.muMode = mu; resetCar();
+  document.querySelector(`input[name=fm][value=${mu?'mu':'ideal'}]`).checked = true;
+  $('muRow').style.display = mu ? 'flex' : 'none';
+  updatePanel();
+}
+$('v').addEventListener('input', e => setV(parseFloat(e.target.value)));
+$('vNum').addEventListener('change', e => setV(parseFloat(e.target.value) || 0));
+$('th').addEventListener('input', e => setTh(parseFloat(e.target.value)));
+$('thNum').addEventListener('change', e => setTh(parseFloat(e.target.value) || 5));
+$('r').addEventListener('input', e => { S.r = parseFloat(e.target.value); resetCar(); fitDist(); updatePanel(); });
+$('m').addEventListener('input', e => { S.m = parseFloat(e.target.value); resetCar(); updatePanel(); });
+$('mu').addEventListener('input', e => { S.mu = parseFloat(e.target.value); resetCar(); updatePanel(); });
+document.querySelectorAll('input[name=fm]').forEach(rd =>
+  rd.addEventListener('change', e => setFrictionModel(e.target.value === 'mu')));
+$('setV0').onclick = ()=> setV(derived().v0);
+$('cComp').addEventListener('change', e => { S.showComp = e.target.checked; });
+$('cFcA').addEventListener('change', e => { S.showFc = e.target.checked; });
+$('cVel').addEventListener('change', e => { S.showVel = e.target.checked; });
+$('cTrail').addEventListener('change', e => { S.showTrail = e.target.checked; S.trail.length = 0; });
+$('pauseBtn').onclick = ()=>{
+  S.paused = !S.paused;
+  $('pauseBtn').textContent = S.paused ? '▶ play' : '⏸ pause';
+};
+$('resetCarBtn').onclick = ()=> resetCar();
+document.querySelectorAll('button.tsc').forEach(b =>
+  b.onclick = ()=>{
+    S.tScale = parseFloat(b.dataset.ts);
+    document.querySelectorAll('button.tsc').forEach(x => x.classList.toggle('on', x===b));
+  });
+
+function updatePanel(){
+  const D = derived();
+  $('rv').textContent = f3(S.r)+' m';
+  $('mv').textContent = f3(S.m)+' kg';
+  $('muv').textContent = f3(S.mu);
+  const mg = S.m*G, mgtan = mg*D.tan;
+  const fA = Math.abs(D.f);
+  const n = x => f3(x/1000);
+  const stp = (i, html) => `<div class="mstep"><span class="mnum">${i}</span>${html}</div>`;
+
+  /* ① what the motion demands */
+  let h = stp(1, `at this speed, centripetal force required:<br>
+    <span class="cFc">F<sub>c</sub> = mv²/r = ${f3(S.m)} × ${f3(S.v)}² / ${f3(S.r)} = <b>${kN(D.Fc)}</b></span>`);
+
+  /* ② test the banking alone */
+  const cmp = D.cs === 'low' ? '&gt;' : (D.cs === 'high' ? '&lt;' : '≈');
+  const verdict = D.cs === 'low' ? '<b>too much</b> inward force'
+                : D.cs === 'high' ? '<b>not enough</b> inward force' : 'exactly right';
+  const vcmp = S.v < D.v0 - 0.05 ? '&lt;' : (S.v > D.v0 + 0.05 ? '&gt;' : '=');
+  h += stp(2, `test the banking alone (assume f = 0):<br>
+    vertically: N cosθ = mg &nbsp;→&nbsp; N = mg / cosθ<br>
+    N sinθ alone must then provide the centripetal force:<br>
+    <span class="cN">N sinθ = (mg / cosθ) × sinθ = mg tanθ = <b>${kN(mgtan)}</b></span><br>
+    <span class="cN">mg tanθ ${cmp} F<sub>c</sub> = ${kN(D.Fc)}</span> → ${verdict}<br>
+    <span class="dim">design speed v₀ = √(gr tanθ) = ${f3(D.v0)} m/s; here v ${vcmp} v₀</span>`);
+
+  /* ③ therefore friction must … */
+  if(D.cs === 'low')
+    h += stp(3, `<span class="cf">hence friction must act <b>UP the slope</b></span> — its horizontal
+      component f cosθ points <i>away from the centre</i>, trimming the inward force down to F<sub>c</sub>.`);
+  else if(D.cs === 'high')
+    h += stp(3, `<span class="cf">hence friction must act <b>DOWN the slope</b></span> — its horizontal
+      component f cosθ points <i>toward the centre</i>, topping the inward force up to F<sub>c</sub>.`);
+  else
+    h += stp(3, `<span class="ok">hence no friction is needed</span> — N sinθ provides F<sub>c</sub> exactly (f = 0).`);
+
+  if(D.skid){
+    /* grip fails — the equations cannot be satisfied */
+    h += stp(4, `<span class="bad">grip check fails:</span> friction required |f| = <b>${kN(fA)}</b>,
+      but maximum static friction is only<br>
+      μ<sub>s</sub>N = ${f3(S.mu)} × ${n(D.N)} = <b>${kN(D.fmax)}</b><br>
+      required &gt; available → <span class="bad"><b>the car skids ${D.f < 0 ? 'up and off the bank' : 'down the bank'}</b></span><br>
+      <span class="dim">circular motion at this r is only possible for ${f3(D.vmin)} ≤ v ≤ ${f3(D.vmax)} m/s</span>`);
+  }else{
+    /* ④⑤ the two resolution equations with numbers */
+    let vEq, hEq, unk;
+    if(D.cs === 'low'){
+      vEq = `N cosθ + f sinθ = mg = ${n(mg)} kN`;
+      hEq = `N sinθ − f cosθ = mv²/r = ${n(D.Fc)} kN`;
+      unk = 'two unknowns: N and f';
+    }else if(D.cs === 'high'){
+      vEq = `N cosθ − f sinθ = mg = ${n(mg)} kN`;
+      hEq = `N sinθ + f cosθ = mv²/r = ${n(D.Fc)} kN`;
+      unk = 'two unknowns: N and f';
+    }else{
+      vEq = `N cosθ = mg = ${n(mg)} kN`;
+      hEq = `N sinθ = mv²/r = ${n(D.Fc)} kN`;
+      unk = 'one unknown: N';
+    }
+    h += stp(4, `resolve <b>vertically</b> (no vertical acceleration):<br>
+      <span class="cN">${vEq}</span> <span class="dim">(${unk})</span>`);
+    h += stp(5, `resolve <b>horizontally</b> (toward the centre):<br>
+      <span class="cN">${hEq}</span>`);
+    const fLine = D.cs === 'ideal'
+      ? `f = <b>0</b> — no friction needed at this speed`
+      : `f = <b>${kN(fA)}</b>${D.cs === 'low' ? ' up the slope' : ' down the slope'}`;
+    h += stp(6, `solve ④ and ⑤ <b>simultaneously</b>:<br>
+      <span class="cN">N = m(g cosθ + <sup>v²</sup>⁄<sub>r</sub> sinθ) = <b>${kN(D.N)}</b></span><br>
+      <span class="cf">${fLine}</span><br>
+      <span class="dim">exam tip: write the two resolution equations first, then solve simultaneously
+      for the unknowns — usually N and f, or N and v.</span>`);
+    if(S.muMode)
+      h += stp(7, `grip check: |f| = ${D.cs === 'ideal' ? '<b>0</b>' : kN(fA)} ≤ μ<sub>s</sub>N = <b>${kN(D.fmax)}</b>
+        <span class="ok">✓ the tyres hold</span><br>
+        <span class="dim">grip range: ${f3(D.vmin)} ≤ v ≤ ${f3(D.vmax)} m/s</span>`);
+  }
+  $('live').innerHTML = h;
+}
+
+/* ================= camera controls ================= */
+function fitDist(){ cam.dist = Math.max(cam.dist, S.r*1.4); }
+function setView(name, btn){
+  const targets = {
+    '3d':  {yaw: cam.yaw, pitch: 0.52, dist: S.r*2.9},
+    'top': {yaw: cam.yaw, pitch: 1.50, dist: S.r*3.3},
+    'edge':{yaw: cam.yaw, pitch: 0.10, dist: S.r*3.1}
+  };
+  cam.tw = targets[name];
+  document.querySelectorAll('#viewBtns .vbtn').forEach(b => b.classList.toggle('on', b===btn));
+}
+$('vb3d').onclick  = e => setView('3d', e.target);
+$('vbTop').onclick = e => setView('top', e.target);
+$('vbEdge').onclick= e => setView('edge', e.target);
+$('zin').onclick  = ()=>{ cam.dist = Math.max(S.r*1.1, cam.dist*0.85); cam.tw = null; };
+$('zout').onclick = ()=>{ cam.dist = Math.min(S.r*9, cam.dist*1.18); cam.tw = null; };
+
+let drag = null;
+cv.addEventListener('mousedown', e => { drag = {x:e.clientX, y:e.clientY, moved:false}; });
+window.addEventListener('mousemove', e => {
+  if(drag){
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if(Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+    if(drag.moved){
+      cam.yaw -= dx*0.008;
+      cam.pitch = Math.max(0.06, Math.min(1.53, cam.pitch + dy*0.008));
+      cam.tw = null;
+      document.querySelectorAll('#viewBtns .vbtn').forEach(b => b.classList.remove('on'));
+      drag.x = e.clientX; drag.y = e.clientY;
+    }
+  }else{
+    /* pointer cursor over hotspots */
+    const r = cv.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    const hot = S.hotspots.some(h => mx>=h.x && mx<=h.x+h.w && my>=h.y && my<=h.y+h.h);
+    cv.style.cursor = hot ? 'pointer' : 'grab';
+  }
+});
+window.addEventListener('mouseup', e => {
+  if(drag && !drag.moved){
+    const r = cv.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    const hit = S.hotspots.find(h => mx>=h.x && mx<=h.x+h.w && my>=h.y && my<=h.y+h.h);
+    S.info = hit ? (S.info === hit.id ? null : hit.id) : null;
+    S.infoFbd = hit ? inFBD(hit) : false;
+  }
+  drag = null;
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.dist = Math.max(S.r*1.1, Math.min(S.r*9, cam.dist*Math.exp(e.deltaY*0.0012)));
+  cam.tw = null;
+}, {passive:false});
+/* touch: 1-finger orbit, 2-finger pinch */
+let tState = null;
+cv.addEventListener('touchstart', e => {
+  if(e.touches.length === 1) tState = {mode:'orbit', x:e.touches[0].clientX, y:e.touches[0].clientY};
+  else if(e.touches.length === 2){
+    const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    tState = {mode:'pinch', d};
+  }
+}, {passive:true});
+cv.addEventListener('touchmove', e => {
+  if(!tState) return;
+  e.preventDefault();
+  if(tState.mode === 'orbit' && e.touches.length === 1){
+    const dx = e.touches[0].clientX - tState.x, dy = e.touches[0].clientY - tState.y;
+    cam.yaw -= dx*0.008;
+    cam.pitch = Math.max(0.06, Math.min(1.53, cam.pitch + dy*0.008));
+    cam.tw = null;
+    tState.x = e.touches[0].clientX; tState.y = e.touches[0].clientY;
+  }else if(tState.mode === 'pinch' && e.touches.length === 2){
+    const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    cam.dist = Math.max(S.r*1.1, Math.min(S.r*9, cam.dist * tState.d/d));
+    tState.d = d; cam.tw = null;
+  }
+}, {passive:false});
+cv.addEventListener('touchend', ()=>{ tState = null; }, {passive:true});
+
+/* ================= main loop ================= */
+let lastT = performance.now();
+function loop(now){
+  const dt = Math.min(0.05, (now - lastT)/1000);
+  lastT = now;
+  const D = derived();
+  if(!S.paused){
+    const simDt = dt * S.tScale;
+    if(!S.crash) S.phi += (S.v / S.r) * simDt;
+    /* crash flight: ballistic, then slide to a stop on the ground */
+    if(S.crash){
+      const C = S.crash;
+      if(!C.stopped){
+        C.p[0] += C.vel[0]*simDt; C.p[1] += C.vel[1]*simDt; C.p[2] += C.vel[2]*simDt;
+        if(C.p[1] > 0.03){
+          C.vel[1] -= G*simDt;                    // airborne: free fall
+        }else{
+          C.p[1] = 0; if(C.vel[1] < 0) C.vel[1] = 0;
+          const sp = Math.hypot(C.vel[0], C.vel[2]), dec = 6.5*simDt;
+          if(sp <= Math.max(dec, 0.4)){ C.vel[0] = C.vel[2] = 0; C.stopped = true; }
+          else{ const k2 = (sp - dec)/sp; C.vel[0] *= k2; C.vel[2] *= k2; }
+        }
+        const rad = Math.hypot(C.p[0], C.p[2]);
+        const Rg = S.r + (TRACKW/2)*D.cos + 14;
+        if(rad > Rg){                             // hits the perimeter barrier
+          C.p[0] *= Rg/rad; C.p[2] *= Rg/rad;
+          C.vel[0] = C.vel[2] = 0;                // keeps falling until it lands
+        }
+        if(!C.stopped) C.psi += C.spin*simDt;     // car spins as it slides
+      }
+    }
+    /* skidding: drift along the slope; leaving the track starts a crash */
+    else if(D.skid){
+      const excess = (Math.abs(D.f) - D.fmax) / (S.m*G);
+      const rate = Math.min(3.5, 0.8 + excess*6);
+      S.drift += (D.f < 0 ? 1 : -1) * rate * simDt;
+      const lim = TRACKW/2 - 1.1;
+      if(S.drift > lim || S.drift < -lim){
+        S.drift = Math.max(-lim, Math.min(lim, S.drift));
+        const Fr = carFrame(D);
+        const mode = D.f < 0 ? 'high' : 'low';
+        const rdir = mode === 'high' ? Fr.u : Fr.u.map(c => -c);
+        const kick = rate*1.6 + (mode === 'high' ? 2.5 : 1.2);
+        S.crash = {
+          mode,
+          p: add(Fr.P, Fr.n, 0.3),
+          vel: [Fr.t[0]*S.v + rdir[0]*kick,
+                mode === 'high' ? Math.max(rdir[1]*kick, 1.5) : -1.5,
+                Fr.t[2]*S.v + rdir[2]*kick],
+          psi: Math.atan2(Fr.t[2], Fr.t[0]),
+          spin: mode === 'high' ? 2.4 : -2.4,
+          stopped: false
+        };
+      }
+    }else if(Math.abs(S.drift) > 0.01){
+      S.drift *= Math.pow(0.15, simDt);           // regained grip: ease back to centreline
+    }
+    /* equal-time trail */
+    S.trailT += simDt;
+    if(S.showTrail && !S.crash && S.trailT > 0.45){
+      S.trailT = 0;
+      S.trail.push(S.phi % (2*Math.PI));
+      if(S.trail.length > 22) S.trail.shift();
+    }
+  }
+  /* camera tween */
+  if(cam.tw){
+    const k = Math.min(1, dt*4.5);
+    cam.pitch += (cam.tw.pitch - cam.pitch)*k;
+    cam.dist  += (cam.tw.dist - cam.dist)*k;
+    if(Math.abs(cam.pitch - cam.tw.pitch) < 0.004 && Math.abs(cam.dist - cam.tw.dist) < 0.5) cam.tw = null;
+  }
+  drawScene(D);
+  requestAnimationFrame(loop);
+}
+
+/* ================= init ================= */
+resize();
+setStep(1);
+cam.dist = S.r*2.9;
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
