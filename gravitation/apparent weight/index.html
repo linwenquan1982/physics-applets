@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apparent Weight: Pole vs Equator</title>
+<style>
+  :root{
+    --bg:#070b1e; --panel:#10162e; --card:rgba(16,22,48,.96); --line:#2b3560;
+    --text:#e9edff; --dim:#a3aed6;
+    --fg:#ff5d73; --nn:#3ee6c4; --net:#ffc94d; --accent:#8ab4ff; --skin:#ffd9a0;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:radial-gradient(ellipse at 50% -10%, #101a3e 0%, var(--bg) 55%);
+       color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; padding:18px; min-height:100vh; font-size:16px;}
+  h1{font-size:1.6rem; text-align:center;}
+  .sub{text-align:center; color:var(--dim); font-size:1.02rem; margin:4px 0 16px;}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:14px;}
+
+  /* ---------- stage: side gutters + centre canvas ---------- */
+  #stage{position:relative; width:1330; width:1330px; margin:0 auto;}
+  #cpanel{position:relative; width:722px; margin:0 auto;}
+  #main{display:block; width:720px; border-radius:14px;}
+  #leads{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible;}
+
+  /* hint chip */
+  #hint{position:absolute; top:14px; left:50%; transform:translateX(-50%);
+        background:rgba(138,180,255,.14); border:1px solid rgba(138,180,255,.45);
+        color:#cdddff; font-size:.95rem; padding:7px 16px; border-radius:999px;
+        pointer-events:none; animation:hintPulse 3.2s ease-in-out infinite; white-space:nowrap; z-index:3;}
+  @keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 rgba(138,180,255,.22);}50%{box-shadow:0 0 16px 4px rgba(138,180,255,.22);}}
+  #hint.gone{display:none;}
+
+  /* ---------- popups (outside the canvas box) ---------- */
+  .pop{position:absolute; width:296px; background:var(--card); border:1px solid var(--line);
+       border-radius:14px; padding:14px 16px 16px;
+       box-shadow:0 12px 34px rgba(0,0,0,.5); z-index:4;
+       opacity:0; pointer-events:none; transition:transform .3s cubic-bezier(.2,1.4,.4,1), opacity .22s;}
+  .pop.open{opacity:1; pointer-events:auto; transform:scale(1) !important;}
+  #popPole{left:0; top:16px; transform:scale(.5); transform-origin:110% 35%;}
+  #popEq{right:0; top:16px; transform:scale(.5); transform-origin:-10% 45%;}
+  .pop h2{font-size:1.08rem; margin-bottom:8px; padding-right:22px; line-height:1.3;}
+  #popPole h2{color:var(--accent);} #popEq h2{color:var(--nn);}
+  .pop .x{position:absolute; top:8px; right:10px; background:none; border:none; color:var(--dim);
+          font-size:1.1rem; cursor:pointer; padding:2px 6px;}
+  .pop .x:hover{color:var(--text);}
+  .pop canvas{display:block; width:100%; border-radius:10px; background:rgba(0,0,0,.25); margin:4px 0 9px;}
+  .pop ul{list-style:none; margin:0 0 7px;}
+  .pop li{font-size:.9rem; color:var(--dim); line-height:1.45; margin:5px 0; padding-left:16px; position:relative;}
+  .pop li::before{content:'▸'; position:absolute; left:0;}
+  #popPole li::before{color:var(--accent);} #popEq li::before{color:var(--nn);}
+  .pop li b{color:var(--text);}
+  .eqbox{background:rgba(0,0,0,.22); border-radius:10px; padding:8px 12px; margin:7px 0;}
+  .eqline{font-family:'Cambria Math',Georgia,serif; font-size:1.05rem; margin:4px 0; color:var(--text);}
+  .cFg{color:var(--fg); font-weight:700;} .cN{color:var(--nn); font-weight:700;} .cNet{color:var(--net); font-weight:700;}
+  sub,sup{font-size:.68em;}
+  .minibars{margin-top:9px;}
+  .mbrow{display:flex; align-items:center; gap:8px; margin:5px 0; font-size:.85rem;}
+  .mbrow .lab{width:70px; color:var(--dim); text-align:right;}
+  .mbtrack{flex:1; height:11px; background:rgba(255,255,255,.07); border-radius:6px; overflow:hidden;}
+  .mbfill{height:100%; border-radius:6px; transition:width .12s linear;}
+  .mbrow .num{width:62px; font-weight:700;}
+  .fineprint{font-size:.76rem; color:#7d88b5; margin-top:8px; font-style:italic; line-height:1.4;}
+  #liftoff{color:var(--net); font-weight:700; font-size:.9rem; margin-top:6px; min-height:1.2em;}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex; flex-wrap:wrap; align-items:center; gap:18px; padding:14px 18px;
+            margin:16px auto 0; max-width:740px;}
+  button.play{background:var(--accent); color:#0b1026; border:none; border-radius:9px;
+         padding:10px 18px; font-size:1rem; font-weight:700; cursor:pointer; min-width:104px;}
+  button.play:hover{filter:brightness(1.12);}
+  .sliderbox{flex:1; min-width:260px;}
+  .sliderbox label{font-size:.95rem; color:var(--dim);}
+  .sliderbox .val{color:var(--net); font-weight:700;}
+  input[type=range]{width:100%; accent-color:var(--net); height:22px;}
+
+  /* ---------- conclusion ---------- */
+  #conc{max-width:740px; margin:16px auto 0; padding:0 18px; overflow:hidden;
+        max-height:70px; transition:max-height .6s ease;}
+  #concTeaser{color:var(--dim); font-size:.98rem; padding:16px 0; text-align:center;}
+  #concBody{display:none; padding:16px 0 16px 16px; font-size:1rem; line-height:1.6;
+            border-left:4px solid var(--nn); margin:12px 0;}
+  #conc.revealed{max-height:320px;}
+  #conc.revealed #concTeaser{display:none;}
+  #conc.revealed #concBody{display:block; animation:concIn .7s ease;}
+  #concBody ul{list-style:none; margin:8px 0 0;}
+  #concBody li{position:relative; padding-left:18px; margin:7px 0; line-height:1.5;}
+  #concBody li::before{content:'▸'; position:absolute; left:0; color:var(--nn);}
+  @keyframes concIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
+
+  /* ---------- narrow screens: popups stack ---------- */
+  @media (max-width:1360px){
+    #stage{width:auto; max-width:740px;}
+    #leads{display:none;}
+    .pop{display:none; position:static; width:auto; margin:12px 0 0; transform:none;}
+    .pop.open{display:block;}
+  }
+</style>
+</head>
+<body>
+  <h1>Effect of Earth&rsquo;s Rotation on Apparent Weight</h1>
+  <div class="sub">The gravitational force is the same everywhere on a spherical Earth &mdash; so why does a scale read less at the Equator?</div>
+
+  <div id="stage">
+    <!-- North Pole popup (left gutter) -->
+    <div class="pop" id="popPole">
+      <button class="x" data-close="pole">&#10005;</button>
+      <h2>North Pole &mdash; spinning on the spot</h2>
+      <canvas id="miniPole" width="264" height="120"></canvas>
+      <ul>
+        <li>Seen from above, the person only <b>rotates about their own CG</b>.</li>
+        <li>Radius of the circular path <b>r = 0</b> &rarr; the CG goes nowhere.</li>
+        <li>So the person is in <b>equilibrium</b>:</li>
+      </ul>
+      <div class="eqbox">
+        <div class="eqline"><span class="cNet">F<sub>net</sub></span> = mr&omega;&sup2; = 0</div>
+        <div class="eqline"><span class="cFg">F<sub>g</sub></span> &minus; <span class="cN">N<sub>pole</sub></span> = 0</div>
+        <div class="eqline"><span class="cN">N<sub>pole</sub></span> = <span class="cFg">F<sub>g</sub></span> = GMm/R&sup2;</div>
+        <div class="eqline" style="padding-left:2.6em;">= <b id="pvN">589.8 N</b></div>
+      </div>
+      <ul><li>The floor pushes up with the <b>full</b> weight &mdash; the scale reads the maximum.</li></ul>
+    </div>
+
+    <div id="cpanel" class="panel">
+      <canvas id="main" width="720" height="560"></canvas>
+      <div id="hint">&#128070; Click a person to zoom into their physics</div>
+    </div>
+
+    <!-- Equator popup (right gutter) -->
+    <div class="pop" id="popEq">
+      <button class="x" data-close="eq">&#10005;</button>
+      <h2>Equator &mdash; real circular motion</h2>
+      <canvas id="miniEq" width="264" height="120"></canvas>
+      <ul>
+        <li>Seen from above, the person is <b>carried around Earth&rsquo;s centre</b> in a circle of radius <b>r = R<sub>E</sub></b>.</li>
+        <li>Circular motion <b>requires</b> a resultant force toward the centre:</li>
+      </ul>
+      <div class="eqbox">
+        <div class="eqline"><span class="cNet">F<sub>net</sub></span> = mR&omega;&sup2; = <b id="evNet">2.0 N</b></div>
+        <div class="eqline"><span class="cFg">F<sub>g</sub></span> &minus; <span class="cN">N<sub>eq</sub></span> = mR&omega;&sup2;</div>
+        <div class="eqline"><span class="cN">N<sub>eq</sub></span> = <b id="evFg">589.8</b> &minus; <b id="evNet2">2.0</b> = <b id="evN">587.8 N</b></div>
+      </div>
+      <div class="minibars">
+        <div class="mbrow"><span class="lab">N pole</span><div class="mbtrack"><div class="mbfill" id="mbPole" style="background:var(--accent); width:100%;"></div></div><span class="num" style="color:var(--accent);" id="mbPoleV">589.8 N</span></div>
+        <div class="mbrow"><span class="lab">N equator</span><div class="mbtrack"><div class="mbfill" id="mbEq" style="background:var(--nn); width:99.7%;"></div></div><span class="num" style="color:var(--nn);" id="mbEqV">587.8 N</span></div>
+      </div>
+      <div id="liftoff"></div>
+      <div class="fineprint">Arrow-length difference is exaggerated on screen so you can see it &mdash; the equations show the true values.</div>
+    </div>
+
+    <svg id="leads">
+      <line id="leadPole" stroke="rgba(138,180,255,.7)" stroke-width="1.6" stroke-dasharray="5 5" visibility="hidden"/>
+      <line id="leadEq" stroke="rgba(62,230,196,.65)" stroke-width="1.6" stroke-dasharray="5 5" visibility="hidden"/>
+    </svg>
+  </div>
+
+  <div class="panel controls">
+    <button class="play" id="playBtn">&#10074;&#10074; Pause</button>
+    <div class="sliderbox">
+      <label>Rotation speed <span class="val" id="speedLab">1.0&times;</span> today&rsquo;s Earth &nbsp;&middot;&nbsp; day length <span class="val" id="dayLab">24.0 h</span> &nbsp;&middot;&nbsp; &omega; = <span class="val" id="omegaLab">7.29&times;10&#8315;&#8309;</span> rad s<sup>&minus;1</sup></label>
+      <input type="range" id="speed" min="1" max="18" step="0.1" value="1">
+    </div>
+  </div>
+
+  <div class="panel" id="conc">
+    <div id="concTeaser">&#128269; Explore <b>both</b> locations to unlock the conclusion&hellip;</div>
+    <div id="concBody">
+      <b style="color:var(--nn);">Conclusion unlocked!</b>
+      <ul>
+        <li>Earth is assumed to be a perfect sphere, so the gravitational force <span class="cFg">F<sub>g</sub></span> (and the gravitational field strength g) is <b>identical</b> at both locations.</li>
+        <li>At the Equator, part of <span class="cFg">F<sub>g</sub></span> is &ldquo;used up&rdquo; providing the centripetal force <span class="cNet">mR&omega;&sup2;</span>.</li>
+        <li>The floor therefore pushes up less &mdash; <b>the apparent weight <span class="cN">N</span> is smaller at the Equator</b>.</li>
+        <li>Push the slider to &asymp;17&times; (a 1.4-hour day): <span class="cN">N</span> reaches zero and objects at the Equator float!</li>
+      </ul>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ---------------- physics ----------------
+  const RE=6.378e6, g0=9.83, m=60, wReal=7.292e-5;
+  const Fg=m*g0;                                   // 589.8 N
+
+  // ---------------- state ----------------
+  let playing=true, theta=0, spinFactor=1, lastT=null, time=0;
+  const open={pole:false, eq:false}, seen={pole:false, eq:false};
+
+  const $=id=>document.getElementById(id);
+  const cvs=$('main'), ctx=cvs.getContext('2d');
+  const mpx=$('miniPole').getContext('2d');
+  const mex=$('miniEq').getContext('2d');
+  const stage=$('stage');
+
+  const C_FG='#ff5d73', C_N='#3ee6c4', C_NET='#ffc94d', C_AC='#8ab4ff', C_DIM='#a3aed6', C_SKIN='#ffd9a0';
+
+  // ---------------- geometry ----------------
+  const cx=360, cy=300, Rpx=170, eb=46;
+  const HOTR=46;
+
+  const stars=[];
+  for(let i=0;i<90;i++) stars.push([Math.random()*720, Math.random()*560, Math.random()*1.3+.3, Math.random()*6.28]);
+
+  // ---------------- draw helpers ----------------
+  function arrow(c,x1,y1,x2,y2,color,w){
+    const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy);
+    if(len<2) return;
+    const ux=dx/len, uy=dy/len, hs=Math.max(8,w*3.2);
+    c.strokeStyle=color; c.fillStyle=color; c.lineWidth=w; c.lineCap='round';
+    c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2-ux*hs*.8,y2-uy*hs*.8); c.stroke();
+    c.beginPath();
+    c.moveTo(x2,y2);
+    c.lineTo(x2-ux*hs-uy*hs*.45, y2-uy*hs+ux*hs*.45);
+    c.lineTo(x2-ux*hs+uy*hs*.45, y2-uy*hs-ux*hs*.45);
+    c.closePath(); c.fill();
+  }
+  function tag(c,x,y,text,color,size){
+    size=size||14;
+    c.font='bold '+size+'px Segoe UI';
+    const w=c.measureText(text).width;
+    c.fillStyle='rgba(7,11,30,.8)';
+    c.beginPath(); c.roundRect(x-5,y-size,w+10,size+7,6); c.fill();
+    c.fillStyle=color; c.fillText(text,x,y);
+  }
+  // spin loop whose NEAR side (bottom, larger y) moves RIGHT — matches how the
+  // whole scene rotates (front of Earth moves right = counter-clockwise seen from above N pole)
+  function spinLoop(c,x,y,rx,ry,color,w){
+    const a1=0.4*Math.PI, a2=2.1*Math.PI;          // gap at bottom-right
+    c.strokeStyle=color; c.lineWidth=w;
+    c.beginPath(); c.ellipse(x,y,rx,ry,0,a1,a2); c.stroke();
+    // arrowhead at the a1 end, pointing in the direction of motion (decreasing angle)
+    const px2=x+rx*Math.cos(a1), py2=y+ry*Math.sin(a1);
+    let tx=rx*Math.sin(a1), ty=-ry*Math.cos(a1);
+    const tl=Math.hypot(tx,ty); tx/=tl; ty/=tl;
+    arrow(c, px2-tx*10, py2-ty*10, px2+tx*8, py2+ty*8, color, w);
+  }
+  function person(c,footX,footY,ox,oy,h,alpha,armPhase,spin){
+    c.save(); c.globalAlpha=alpha;
+    const px=-oy, py=ox;
+    const hipX=footX+ox*h*.45, hipY=footY+oy*h*.45;
+    const neckX=footX+ox*h*.78, neckY=footY+oy*h*.78;
+    const headX=footX+ox*h*.92, headY=footY+oy*h*.92;
+    c.strokeStyle=C_SKIN; c.lineWidth=3.2; c.lineCap='round';
+    c.beginPath(); c.moveTo(footX+px*5,footY+py*5); c.lineTo(hipX,hipY); c.lineTo(footX-px*5,footY-py*5); c.stroke();
+    c.beginPath(); c.moveTo(hipX,hipY); c.lineTo(neckX,neckY); c.stroke();
+    const aw = spin ? 10*Math.cos(armPhase) : 9;   // equator person: fixed pose (no self-spin)
+    const shX=footX+ox*h*.70, shY=footY+oy*h*.70;
+    c.beginPath(); c.moveTo(shX+px*aw,shY+py*aw); c.lineTo(shX,shY); c.lineTo(shX-px*aw,shY-py*aw); c.stroke();
+    c.beginPath(); c.arc(headX,headY,h*.11,0,7); c.fillStyle=C_SKIN; c.fill();
+    c.restore();
+    return {cgX:footX+ox*h*.55, cgY:footY+oy*h*.55, headX, headY};
+  }
+  function halo(c,x,y,phase,color){
+    for(let k=0;k<2;k++){
+      const p=((time*0.32+phase+k*.5)%1);          // slow, calm pulse
+      const r=HOTR*0.55+p*HOTR*0.6;
+      c.strokeStyle=color; c.globalAlpha=(1-p)*.5; c.lineWidth=2;
+      c.beginPath(); c.arc(x,y,r,0,7); c.stroke();
+    }
+    c.globalAlpha=1;
+  }
+  // exaggerated-but-consistent lengths: drawn Fg = drawn N + drawn Fnet
+  function displaySplit(x){
+    const fx=Math.pow(Math.min(1,Math.max(0,x)),0.4);
+    return {n:1-fx, net:fx};
+  }
+
+  // ---------------- main scene ----------------
+  let polePos={x:cx,y:cy-Rpx-26}, eqPos={x:cx,y:cy+eb+26};
+
+  function drawMain(NeqRatio, netRatio){
+    ctx.clearRect(0,0,720,560);
+    stars.forEach(s=>{
+      ctx.globalAlpha=.35+.3*Math.sin(time*1.7+s[3]);
+      ctx.fillStyle='#cfe0ff'; ctx.beginPath(); ctx.arc(s[0],s[1],s[2],0,7); ctx.fill();
+    });
+    ctx.globalAlpha=1;
+
+    // axis
+    ctx.strokeStyle='rgba(152,163,207,.5)'; ctx.setLineDash([7,6]); ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(cx,cy-Rpx-70); ctx.lineTo(cx,cy+Rpx+48); ctx.stroke(); ctx.setLineDash([]);
+
+    // equator person position (revolves about Earth's axis only, front moves right)
+    const s=Math.sin(theta), co=Math.cos(theta);
+    const ppx=cx+Rpx*s, ppy=cy+eb*co;
+    const behind=co<0;
+    const dR=Math.hypot(ppx-cx,ppy-cy)||1;
+    const ox=(ppx-cx)/dR, oy=(ppy-cy)/dR;
+    const lift=NeqRatio<=0? Math.min(18,(-NeqRatio)*60+6):0;
+    const footX=ppx+ox*lift, footY=ppy+oy*lift;
+
+    // back half of orbit
+    ctx.strokeStyle='rgba(138,180,255,.28)'; ctx.setLineDash([5,6]); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.ellipse(cx,cy,Rpx,eb,0,Math.PI,2*Math.PI); ctx.stroke(); ctx.setLineDash([]);
+
+    if(behind) person(ctx,footX,footY,ox,oy,46,.28,0,false);
+
+    // Earth
+    const grd=ctx.createRadialGradient(cx-55,cy-65,20,cx,cy,Rpx);
+    grd.addColorStop(0,'#4a7cc4'); grd.addColorStop(.5,'#2a5495'); grd.addColorStop(1,'#122a55');
+    ctx.beginPath(); ctx.arc(cx,cy,Rpx,0,7); ctx.fillStyle=grd; ctx.fill();
+    const sh=ctx.createRadialGradient(cx+90,cy+70,40,cx,cy,Rpx*1.15);
+    sh.addColorStop(0,'rgba(0,0,0,0)'); sh.addColorStop(1,'rgba(0,0,10,.35)');
+    ctx.beginPath(); ctx.arc(cx,cy,Rpx,0,7); ctx.fillStyle=sh; ctx.fill();
+    ctx.strokeStyle='rgba(160,190,255,.55)'; ctx.lineWidth=1.5; ctx.stroke();
+
+    // latitudes + rotating surface dots (front face moves right)
+    const lats=[[0,Rpx,eb],[.55,Rpx*.835,eb*.835],[-.55,Rpx*.835,eb*.835]];
+    ctx.strokeStyle='rgba(200,220,255,.16)'; ctx.lineWidth=1;
+    lats.forEach(L=>{ctx.beginPath(); ctx.ellipse(cx,cy+Rpx*L[0],L[1],L[2],0,0,7); ctx.stroke();});
+    for(let k=0;k<5;k++){
+      const a=theta+k*1.2566, c2=Math.cos(a);
+      if(c2>0) lats.forEach(L=>{
+        ctx.globalAlpha=.5*c2; ctx.fillStyle='#cfe0ff';
+        ctx.beginPath(); ctx.arc(cx+L[1]*Math.sin(a), cy+Rpx*L[0]+L[2]*c2, 2.3, 0, 7); ctx.fill();
+        ctx.globalAlpha=1;
+      });
+    }
+
+    // front half of orbit + direction chevrons
+    ctx.strokeStyle='rgba(138,180,255,.75)'; ctx.setLineDash([5,6]); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.ellipse(cx,cy,Rpx,eb,0,0,Math.PI); ctx.stroke(); ctx.setLineDash([]);
+    [-0.55,0.55].forEach(a=>{
+      const chx=cx+Rpx*Math.sin(a), chy=cy+eb*Math.cos(a);
+      const tx=Math.cos(a)*Rpx, ty=-Math.sin(a)*eb, tl=Math.hypot(tx,ty);
+      arrow(ctx,chx-tx/tl*9,chy-ty/tl*9,chx+tx/tl*9,chy+ty/tl*9,'rgba(138,180,255,.9)',2);
+    });
+
+    // radius line r = R (subtle)
+    ctx.strokeStyle='rgba(255,201,77,.4)'; ctx.setLineDash([3,5]);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ppx,ppy); ctx.stroke(); ctx.setLineDash([]);
+
+    // rotation loop below Earth (near side moves right — consistent everywhere)
+    const ryy=cy+Rpx+30;
+    spinLoop(ctx,cx,ryy,30,10,C_AC,2.4);
+    tag(ctx,cx+48,ryy+8,'ω  (Earth spins)',C_AC,13);
+
+    // ---- location labels: close to features, in clear space on the LEFT ----
+    tag(ctx,cx-Rpx-72,cy+5,'Equator','#cdddff');
+    tag(ctx,cx-152,cy-Rpx-20,'North Pole','#cdddff');
+
+    // ---- pole person ----
+    const pFootX=cx, pFootY=cy-Rpx;
+    const pol=person(ctx,pFootX,pFootY,0,-1,48,1,theta*3,true);
+    polePos={x:pFootX,y:pFootY-26};
+    // small spin loop above head (kept clear of N arrow)
+    spinLoop(ctx,pol.headX-6,pol.headY-24,10,3.6,C_AC,1.6);
+
+    const L=64;
+    // Fg down (left of body), label bottom-left
+    arrow(ctx,pFootX-10,pFootY-26,pFootX-10,pFootY-26+L,C_FG,3.4);
+    tag(ctx,pFootX-54,pFootY+26,'Fg',C_FG);
+    // N up (right of body), label to the right, clear of everything
+    arrow(ctx,pFootX+12,pFootY+2,pFootX+12,pFootY+2-L,C_N,3.4);
+    tag(ctx,pFootX+30,pFootY-40,'N',C_N);
+
+    // ---- equator person (front) ----
+    if(!behind){
+      const pr=person(ctx,footX,footY,ox,oy,46,1,0,false);
+      const d=displaySplit(netRatio);
+      arrow(ctx,pr.cgX,pr.cgY,pr.cgX-ox*L,pr.cgY-oy*L,C_FG,3.4);
+      tag(ctx,pr.cgX-ox*(L+22)-10,pr.cgY-oy*(L+22)+6,'Fg',C_FG);
+      const Ln=d.n*L;
+      if(Ln>3){
+        arrow(ctx,footX,footY,footX+ox*Ln,footY+oy*Ln,C_N,3.4);
+        tag(ctx,footX+ox*(Ln+20)-6,footY+oy*(Ln+20)+8,'N',C_N);
+      } else {
+        tag(ctx,footX+ox*26-38,footY+oy*26,'N = 0 — floating!',C_N,13);
+      }
+      if(open.eq){ // velocity arrow (tangent, direction of motion)
+        const vx=Math.cos(theta)*Rpx, vy=-Math.sin(theta)*eb, vl=Math.hypot(vx,vy);
+        arrow(ctx,pr.headX,pr.headY,pr.headX+vx/vl*36,pr.headY+vy/vl*36,'#ffffff',2);
+        tag(ctx,pr.headX+vx/vl*48-4,pr.headY+vy/vl*48+5,'v','#ffffff',13);
+      }
+      eqPos={x:pr.cgX,y:pr.cgY};
+    } else {
+      eqPos={x:footX+ox*25,y:footY+oy*25};
+    }
+
+    // halos (slow pulse)
+    if(!open.pole) halo(ctx,polePos.x,polePos.y,0,C_AC);
+    if(!open.eq)   halo(ctx,eqPos.x,eqPos.y,.35,C_N);
+
+    // highlight rings while popup open
+    ctx.setLineDash([4,4]); ctx.lineWidth=1.6;
+    if(open.pole){ ctx.strokeStyle='rgba(138,180,255,.9)'; ctx.beginPath(); ctx.arc(polePos.x,polePos.y,34,0,7); ctx.stroke(); }
+    if(open.eq){ ctx.strokeStyle='rgba(62,230,196,.85)'; ctx.beginPath(); ctx.arc(eqPos.x,eqPos.y,32,0,7); ctx.stroke(); }
+    ctx.setLineDash([]);
+  }
+
+  // ---------------- SVG leader lines (canvas → side popups) ----------------
+  function canvasToStage(p){
+    const cr=cvs.getBoundingClientRect(), sr=stage.getBoundingClientRect();
+    return {x:cr.left-sr.left+p.x*cr.width/cvs.width, y:cr.top-sr.top+p.y*cr.height/cvs.height};
+  }
+  function setLead(id,pop,pos,ring){
+    const el=$(id);
+    if(!pop){ el.setAttribute('visibility','hidden'); return; }
+    const pr=$(pop).getBoundingClientRect(), sr=stage.getBoundingClientRect();
+    const P=canvasToStage(pos);
+    const fromLeft = (pr.left-sr.left) < P.x;    // popup on the left of the person?
+    const ax = fromLeft ? pr.right-sr.left : pr.left-sr.left;
+    const ay = pr.top-sr.top + pr.height*0.35;
+    el.setAttribute('x1',ax); el.setAttribute('y1',ay);
+    el.setAttribute('x2',P.x + (fromLeft?-ring:ring)); el.setAttribute('y2',P.y);
+    el.setAttribute('visibility','visible');
+  }
+
+  // ---------------- mini views (rotation sense matches main view:
+  //   main front face moves RIGHT  ⇔  top view rotates counter-clockwise) ----
+  function drawMiniPole(){
+    const c=mpx; c.clearRect(0,0,264,120);
+    const x=58,y=60;
+    c.strokeStyle='rgba(138,180,255,.5)'; c.setLineDash([3,4]);
+    c.beginPath(); c.arc(x,y,4,0,7); c.stroke(); c.setLineDash([]);
+    c.save(); c.translate(x,y); c.rotate(-theta*3);          // CCW, same sense as Earth
+    c.strokeStyle=C_SKIN; c.lineWidth=3; c.lineCap='round';
+    c.beginPath(); c.moveTo(-24,0); c.lineTo(24,0); c.stroke();
+    c.beginPath(); c.arc(0,0,9,0,7); c.fillStyle=C_SKIN; c.fill();
+    c.fillStyle='#8a5a2b'; c.beginPath(); c.moveTo(0,-9); c.lineTo(4,-15); c.lineTo(-4,-15); c.closePath(); c.fill();
+    c.restore();
+    c.fillStyle=C_NET; c.beginPath(); c.arc(x,y,2.6,0,7); c.fill();
+    // CCW spin arrow — same helper as the main view, so sense always matches
+    spinLoop(c,x,y,36,36,C_AC,1.6);
+    c.fillStyle='#e9edff'; c.font='13px Segoe UI';
+    c.fillText('top view of pole',128,46);
+    c.fillStyle=C_NET; c.fillText('CG fixed:  r ≈ 0',128,68);
+  }
+  function drawMiniEq(netRatio){
+    const c=mex; c.clearRect(0,0,264,120);
+    const x=58,y=60,R2=38;
+    const g=c.createRadialGradient(x-10,y-10,5,x,y,R2);
+    g.addColorStop(0,'#4a7cc4'); g.addColorStop(1,'#122a55');
+    c.beginPath(); c.arc(x,y,R2,0,7); c.fillStyle=g; c.fill();
+    c.strokeStyle='rgba(160,190,255,.4)'; c.stroke();
+    c.strokeStyle='rgba(138,180,255,.6)'; c.setLineDash([4,4]);
+    c.beginPath(); c.arc(x,y,R2+8,0,7); c.stroke(); c.setLineDash([]);
+    const a=Math.PI/2 - theta;                               // decreasing angle = CCW, same sense as Earth
+    const dx=x+(R2+8)*Math.cos(a), dy=y+(R2+8)*Math.sin(a);
+    c.strokeStyle='rgba(255,201,77,.4)'; c.setLineDash([3,4]);
+    c.beginPath(); c.moveTo(x,y); c.lineTo(dx,dy); c.stroke(); c.setLineDash([]);
+    c.fillStyle=C_SKIN; c.beginPath(); c.arc(dx,dy,5.5,0,7); c.fill();
+    const Ln=10+Math.pow(netRatio,0.4)*26;
+    arrow(c,dx,dy,dx-Ln*Math.cos(a),dy-Ln*Math.sin(a),C_NET,2.2);
+    c.fillStyle='#e9edff'; c.font='13px Segoe UI';
+    c.fillText('top view of equator',128,40);
+    c.fillStyle=C_NET;
+    c.fillText('CG circles Earth:',128,62);
+    c.fillText('r = Rₑ',128,82);
+  }
+
+  // ---------------- readouts ----------------
+  function fmt(x){return x.toFixed(1);}
+  function updateUI(Neq,Fnet){
+    if(open.eq){
+      $('evNet').textContent=fmt(Fnet)+' N';
+      $('evNet2').textContent=fmt(Fnet);
+      $('evFg').textContent=fmt(Fg);
+      $('evN').textContent=(Neq>0?fmt(Neq)+' N':'0 (lift-off!)');
+      $('mbPole').style.width='100%'; $('mbPoleV').textContent=fmt(Fg)+' N';
+      $('mbEq').style.width=Math.max(0,Neq/Fg*100)+'%';
+      $('mbEqV').textContent=(Neq>0?fmt(Neq):'0.0')+' N';
+      $('liftoff').textContent=Neq<=0?'⚠ LIFT-OFF! The ground can no longer push at all.':'';
+    }
+    $('speedLab').textContent=spinFactor.toFixed(1)+'×';
+    $('dayLab').textContent=(24/spinFactor).toFixed(1)+' h';
+    $('omegaLab').textContent=(wReal*spinFactor*1e5).toFixed(2)+'×10⁻⁵';
+  }
+
+  // ---------------- loop ----------------
+  function frame(t){
+    if(lastT===null) lastT=t;
+    const dt=Math.min(.05,(t-lastT)/1000); lastT=t; time+=dt;
+    if(playing) theta+=(0.32+0.13*spinFactor)*dt;
+    const w=wReal*spinFactor, Fnet=m*RE*w*w, Neq=Fg-Fnet;
+    drawMain(Neq/Fg, Fnet/Fg);
+    if(open.pole) drawMiniPole();
+    if(open.eq)   drawMiniEq(Fnet/Fg);
+    setLead('leadPole', open.pole?'popPole':null, polePos, 34);
+    setLead('leadEq',   open.eq?'popEq':null,   eqPos, 32);
+    updateUI(Neq,Fnet);
+    requestAnimationFrame(frame);
+  }
+
+  // ---------------- interaction ----------------
+  function canvasPoint(e){
+    const r=cvs.getBoundingClientRect();
+    return {x:(e.clientX-r.left)*cvs.width/r.width, y:(e.clientY-r.top)*cvs.height/r.height};
+  }
+  function hit(p,pos){return Math.hypot(p.x-pos.x,p.y-pos.y)<HOTR;}
+  function toggle(which){
+    open[which]=!open[which];
+    seen[which]=true;
+    $(which==='pole'?'popPole':'popEq').classList.toggle('open',open[which]);
+    if(seen.pole&&seen.eq){
+      $('hint').classList.add('gone');
+      $('conc').classList.add('revealed');
+    }
+  }
+  cvs.addEventListener('click',e=>{
+    const p=canvasPoint(e);
+    if(hit(p,polePos)) toggle('pole');
+    else if(hit(p,eqPos)) toggle('eq');
+  });
+  cvs.addEventListener('mousemove',e=>{
+    const p=canvasPoint(e);
+    cvs.style.cursor=(hit(p,polePos)||hit(p,eqPos))?'pointer':'default';
+  });
+  document.querySelectorAll('.pop .x').forEach(b=>{
+    b.addEventListener('click',()=>toggle(b.dataset.close));
+  });
+  $('playBtn').addEventListener('click',()=>{
+    playing=!playing;
+    $('playBtn').innerHTML=playing?'&#10074;&#10074; Pause':'&#9654; Play';
+  });
+  $('speed').addEventListener('input',e=>{spinFactor=parseFloat(e.target.value);});
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
